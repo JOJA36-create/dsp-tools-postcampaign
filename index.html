@@ -3,72 +3,197 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Post-campaign pDOOH Heatmap</title>
+  <title>DSP Tools | Post-campaign Heatmap</title>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <style>
-    *{box-sizing:border-box}body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#f3f6f8;color:#17202a}
-    .wrap{max-width:1040px;margin:0 auto;padding:28px}.panel{background:#fff;border:1px solid #d7dde5;border-radius:8px;padding:22px;box-shadow:0 10px 30px rgba(15,23,42,.06)}
-    h1{margin:0 0 8px;font-size:26px}.sub{color:#667085;margin:0 0 22px;line-height:1.45}.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-    .field{display:grid;gap:7px;margin-bottom:14px}label{font-size:13px;color:#667085}input,select{width:100%;border:1px solid #d7dde5;border-radius:7px;padding:10px 11px;background:#fff;font-size:14px}
-    .drop{border:1.5px dashed #aab4c2;border-radius:8px;background:#fbfcfd;padding:22px;text-align:center;margin:16px 0}.drop b{display:block;margin-bottom:6px}
-    .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}button,a.button{border:1px solid #0f766e;background:#0f766e;color:#fff;border-radius:7px;padding:10px 14px;font-weight:700;text-decoration:none;cursor:pointer}
-    a.secondary{background:#fff;color:#0f766e}.log{margin-top:16px;padding:12px;border-radius:8px;background:#f8fafc;border:1px solid #d7dde5;color:#344054;white-space:pre-wrap;line-height:1.45}
-    .ok{background:#ecfdf3;border-color:#bbf7d0}.err{background:#fff1f2;border-color:#fecdd3;color:#9f1239}.small{font-size:12px;color:#667085;margin-top:14px;line-height:1.4}
-    @media(max-width:760px){.grid{grid-template-columns:1fr}.wrap{padding:16px}}
+    :root{--maroon:#8b1e2d;--green:#0f3d2e;--ink:#111317;--warm:#f6f4ee;--olive:#a6b37a;--line:#ded8cc;--muted:#6b6f76}
+    *{box-sizing:border-box}body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--warm);color:var(--ink)}
+    body:before{content:"";position:fixed;inset:0;pointer-events:none;background:radial-gradient(circle at 80% 0%,rgba(139,30,45,.10),transparent 34%),radial-gradient(circle at 6% 18%,rgba(15,61,46,.10),transparent 28%);opacity:.9}
+    .app-shell{min-height:100vh;position:relative}.topbar{height:68px;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 28px;box-shadow:0 10px 30px rgba(17,19,23,.14)}
+    .brand{display:flex;align-items:center;gap:13px;font-weight:900;letter-spacing:.08em;text-transform:uppercase}.brand-mark{display:grid;place-items:center;width:42px;height:42px;border-radius:8px;background:var(--maroon);font-size:20px;font-weight:900;box-shadow:inset 0 -4px 0 rgba(0,0,0,.16)}.brand small{display:block;margin-top:2px;font-size:11px;color:#d5dfd5;letter-spacing:.12em}.top-actions{display:flex;align-items:center;gap:10px}.pill{border:1px solid rgba(255,255,255,.24);border-radius:999px;padding:8px 12px;font-size:12px;color:#e8efe8}
+    .layout{display:grid;grid-template-columns:280px 1fr;gap:22px;max-width:1380px;margin:0 auto;padding:24px}.sidebar{background:rgba(255,255,255,.75);border:1px solid var(--line);border-radius:8px;padding:18px;align-self:start;box-shadow:0 14px 34px rgba(17,19,23,.08)}.section-title{margin:0 0 12px;font-size:12px;text-transform:uppercase;letter-spacing:.18em}.nav{display:grid;gap:8px}.nav button{justify-content:flex-start;width:100%;background:transparent;color:var(--ink);border:1px solid transparent}.nav button.active{background:var(--green);color:#fff;border-color:var(--green)}.nav button.secondary-nav{border-color:var(--line)}
+    .main{display:grid;gap:18px}.hero{background:#fff;border:1px solid var(--line);border-radius:8px;padding:24px;box-shadow:0 14px 34px rgba(17,19,23,.08);display:grid;grid-template-columns:1.35fr .85fr;gap:20px}.eyebrow{font-size:12px;color:var(--maroon);font-weight:900;letter-spacing:.14em;text-transform:uppercase}.hero h1{margin:8px 0 10px;font-size:34px;line-height:1.08;letter-spacing:0}.sub{color:#555f68;margin:0;line-height:1.45}.hero-metrics{display:grid;grid-template-columns:1fr 1fr;gap:10px}.metric{border:1px solid var(--line);border-radius:8px;padding:14px;background:#fbfaf6}.metric b{display:block;font-size:24px}.metric span{font-size:12px;color:var(--muted)}
+    .panel{background:#fff;border:1px solid var(--line);border-radius:8px;padding:22px;box-shadow:0 14px 34px rgba(17,19,23,.08)}.panel-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;margin-bottom:16px}.panel h2{margin:0 0 6px;font-size:22px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.field{display:grid;gap:7px;margin-bottom:14px}label{font-size:13px;color:#667085}input,select{width:100%;border:1px solid #d7dde5;border-radius:7px;padding:10px 11px;background:#fff;font-size:14px}
+    .drop{border:1.5px dashed #b9ad9d;border-radius:8px;background:#fbfaf6;padding:20px;text-align:left;margin:16px 0;line-height:1.45}.drop b{display:block;margin-bottom:6px}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}button,a.button{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--green);background:var(--green);color:#fff;border-radius:7px;padding:10px 14px;font-weight:700;text-decoration:none;cursor:pointer;font-size:14px}
+    button.maroon,a.maroon{border-color:var(--maroon);background:var(--maroon)}button.ghost,a.secondary{background:#fff;color:var(--green)}button.danger{border-color:#d9b7bd;color:var(--maroon);background:#fff}.log{margin-top:16px;padding:12px;border-radius:8px;background:#fbfaf6;border:1px solid var(--line);color:#344054;white-space:pre-wrap;line-height:1.45}
+    .ok{background:#ecfdf3;border-color:#bbf7d0}.err{background:#fff1f2;border-color:#fecdd3;color:#9f1239}.small{font-size:12px;color:#667085;margin-top:14px;line-height:1.4}.view{display:none}.view.active{display:block}.maps-list{display:grid;gap:10px}.map-card{border:1px solid var(--line);border-radius:8px;background:#fbfaf6;padding:14px;display:grid;grid-template-columns:1fr auto;gap:14px;align-items:center}.map-card h3{margin:0 0 6px;font-size:16px}.meta{display:flex;gap:12px;flex-wrap:wrap;color:var(--muted);font-size:12px}.empty{border:1px dashed #b9ad9d;border-radius:8px;padding:22px;background:#fbfaf6;color:#667085}.swatches{display:flex;gap:8px;margin-top:14px}.swatches span{width:34px;height:8px;border-radius:999px}.footer-note{font-size:12px;color:#667085;line-height:1.45}
+    @media(max-width:940px){.layout{grid-template-columns:1fr}.hero{grid-template-columns:1fr}.sidebar{position:static}.topbar{height:auto;gap:14px;align-items:flex-start;flex-direction:column;padding:18px}.grid{grid-template-columns:1fr}.map-card{grid-template-columns:1fr}.hero h1{font-size:28px}}
   </style>
 </head>
 <body>
-<div class="wrap">
-  <div class="panel">
-    <h1>Создание тепловой карты по итогам открутки pDOOH</h1>
-    <p class="sub">Загрузи итоговый отчет по кампании. Карта покажет фактически открученные OTS: чем больше контактов, тем крупнее точка и ярче ореол.</p>
-    <div class="grid">
-      <div class="field">
-        <label for="file">Excel-файл отчета</label>
-        <input id="file" type="file" accept=".xlsx,.xls">
+<div class="app-shell">
+  <header class="topbar">
+    <div class="brand"><div class="brand-mark">DSP</div><div>DSP Tools<small>Post-campaign heatmaps</small></div></div>
+    <div class="top-actions"><span class="pill">v0.2 local portal</span><span class="pill">Файл не уходит на сервер</span></div>
+  </header>
+  <div class="layout">
+    <aside class="sidebar">
+      <p class="section-title">Рабочее место</p>
+      <div class="nav">
+        <button class="active" data-view="createView">Создать карту</button>
+        <button class="secondary-nav" data-view="libraryView">Мои карты</button>
       </div>
-      <div class="field">
-        <label for="title">Название карты</label>
-        <input id="title" value="Тепловая карта по итогам открутки pDOOH">
-      </div>
-      <div class="field">
-        <label for="agg">Если одна поверхность встречается несколько раз</label>
-        <select id="agg">
-          <option value="gid">Суммировать по GID</option>
-          <option value="coords">Суммировать по координатам</option>
-          <option value="rows">Оставить строки отдельно</option>
-        </select>
-      </div>
-      <div class="field">
-        <label for="metric">Метрика ореола</label>
-        <select id="metric">
-          <option value="contacts">Фактические OTS / контакты</option>
-          <option value="plays">Количество выходов</option>
-          <option value="spend">Потрачено средств</option>
-        </select>
-      </div>
+      <div class="swatches"><span style="background:#8b1e2d"></span><span style="background:#0f3d2e"></span><span style="background:#111317"></span><span style="background:#a6b37a"></span></div>
+      <p class="footer-note">Пока карты сохраняются локально в браузере. Сервер, авторизация и клиентские ссылки будут следующим большим шагом.</p>
+    </aside>
+    <main class="main">
+      <section class="hero">
+        <div>
+          <div class="eyebrow">DSP Tools</div>
+          <h1>Создание тепловой карты по итогам открутки pDOOH</h1>
+          <p class="sub">Загрузи итоговый отчет по кампании. Сервис соберет карту фактических OTS, добавит ореолы, рейтинг поверхностей и сохранит результат в локальной библиотеке.</p>
+        </div>
+        <div class="hero-metrics">
+          <div class="metric"><b id="savedCount">0</b><span>карт сохранено</span></div>
+          <div class="metric"><b>1-5</b><span>рейтинг внутри города</span></div>
+          <div class="metric"><b>HTML</b><span>готовый файл для клиента</span></div>
+          <div class="metric"><b>Local</b><span>без отправки Excel</span></div>
+        </div>
+      </section>
+
+      <section id="createView" class="view active">
+        <div class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>Новая карта</h2>
+              <p class="sub">Собери отчетную карту и сохрани ее в списке созданных карт.</p>
+            </div>
+          </div>
+          <div class="grid">
+            <div class="field">
+              <label for="file">Excel-файл отчета</label>
+              <input id="file" type="file" accept=".xlsx,.xls">
+            </div>
+            <div class="field">
+              <label for="title">Название карты</label>
+              <input id="title" value="Тепловая карта по итогам открутки pDOOH">
+            </div>
+            <div class="field">
+              <label for="agg">Если одна поверхность встречается несколько раз</label>
+              <select id="agg">
+                <option value="gid">Суммировать по GID</option>
+                <option value="coords">Суммировать по координатам</option>
+                <option value="rows">Оставить строки отдельно</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="metric">Метрика ореола</label>
+              <select id="metric">
+                <option value="contacts">Фактические OTS / контакты</option>
+                <option value="plays">Количество выходов</option>
+                <option value="spend">Потрачено средств</option>
+              </select>
+            </div>
+          </div>
+          <div class="drop">
+            <b>Что будет на карте</b>
+            Фильтры по городу и формату, включение и выключение ореолов, карточка точки с адресом, GID, факт OTS, выходами и spend.
+          </div>
+          <div class="actions">
+            <button id="generate" class="maroon">Собрать карту</button>
+            <a id="openLink" class="button secondary" target="_blank" style="display:none">Открыть карту</a>
+            <a id="downloadLink" class="button" download="postcampaign-heatmap.html" style="display:none">Скачать HTML</a>
+          </div>
+          <div id="log" class="log">Файл еще не загружен.</div>
+          <div class="small">Готовая карта сохраняется в этом браузере. Для клиента можно скачать HTML и отправить отдельным файлом.</div>
+        </div>
+      </section>
+
+      <section id="libraryView" class="view">
+        <div class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>Мои карты</h2>
+              <p class="sub">Локальная библиотека карт, созданных на этом компьютере.</p>
+            </div>
+            <button id="clearMaps" class="danger">Очистить список</button>
+          </div>
+          <div id="mapsList" class="maps-list"></div>
+        </div>
+      </section>
     </div>
-    <div class="drop">
-      <b>Что будет на карте</b>
-      Фильтры по городу и формату, включение/выключение ореолов, карточка точки с адресом, GID, факт OTS, выходами и spend.
-    </div>
-    <div class="actions">
-      <button id="generate">Собрать карту</button>
-      <a id="openLink" class="button secondary" target="_blank" style="display:none">Открыть карту</a>
-      <a id="downloadLink" class="button" download="postcampaign-heatmap.html" style="display:none">Скачать HTML</a>
-    </div>
-    <div id="log" class="log">Файл еще не загружен.</div>
-    <div class="small">Карта создается локально в браузере. Готовый HTML можно отправить коллегам или загрузить на статический хостинг.</div>
   </div>
 </div>
 <script>
 const log = document.getElementById("log");
+const STORAGE_KEY = "dspToolsPostcampaignMapsV1";
+let latestMap = null;
 function setLog(text, cls=""){ log.className = "log " + cls; log.textContent = text; }
 function num(v){ if(v == null || v === "") return null; const x = Number(String(v).replace(/\s/g,"").replace(",", ".")); return Number.isFinite(x) ? x : null; }
 function norm(s){ return String(s || "").toLowerCase().replace(/ё/g,"е").replace(/[.,()"«»]/g," ").replace(/\s+/g," ").trim(); }
 function findCol(headers, variants){ return headers.findIndex(h => variants.some(v => norm(h).includes(norm(v)))); }
 function safeName(s){ return String(s || "postcampaign-heatmap").replace(/[\\/:*?"<>|]+/g,"_"); }
 function escHtml(s){ return String(s ?? "").replace(/[&<>"]/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[ch])); }
+function getMaps(){ try{ return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); }catch(e){ return []; } }
+function setMaps(maps){ localStorage.setItem(STORAGE_KEY, JSON.stringify(maps)); renderMaps(); }
+function fmtDate(ts){ return new Intl.DateTimeFormat("ru-RU", {day:"2-digit", month:"2-digit", year:"numeric", hour:"2-digit", minute:"2-digit"}).format(new Date(ts)); }
+function formatNumber(v){ return new Intl.NumberFormat("ru-RU", {maximumFractionDigits:0}).format(v || 0); }
+function openHtml(html){
+  const blob = new Blob([html], {type:"text/html;charset=utf-8"});
+  window.open(URL.createObjectURL(blob), "_blank");
+}
+function downloadHtml(html, title){
+  const blob = new Blob([html], {type:"text/html;charset=utf-8"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = safeName(title) + ".html";
+  a.click();
+}
+function saveMap(record){
+  const maps = getMaps();
+  maps.unshift(record);
+  setMaps(maps.slice(0, 24));
+}
+function renderMaps(){
+  const maps = getMaps();
+  document.getElementById("savedCount").textContent = maps.length;
+  const list = document.getElementById("mapsList");
+  if(!maps.length){
+    list.innerHTML = '<div class="empty">Пока сохраненных карт нет. Собери первую карту, и она появится здесь.</div>';
+    return;
+  }
+  list.innerHTML = maps.map(map => `
+    <article class="map-card" data-id="${map.id}">
+      <div>
+        <h3>${escHtml(map.title)}</h3>
+        <div class="meta">
+          <span>${fmtDate(map.createdAt)}</span>
+          <span>${formatNumber(map.points)} точек</span>
+          <span>${formatNumber(map.contacts)} OTS</span>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="ghost" data-action="open">Открыть</button>
+        <button data-action="download">Скачать HTML</button>
+        <button class="danger" data-action="delete">Удалить</button>
+      </div>
+    </article>
+  `).join("");
+}
+document.querySelectorAll(".nav button").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".nav button").forEach(x => x.classList.remove("active"));
+    document.querySelectorAll(".view").forEach(x => x.classList.remove("active"));
+    btn.classList.add("active");
+    document.getElementById(btn.dataset.view).classList.add("active");
+  });
+});
+document.getElementById("mapsList").addEventListener("click", e => {
+  const button = e.target.closest("button");
+  const card = e.target.closest(".map-card");
+  if(!button || !card) return;
+  const maps = getMaps();
+  const map = maps.find(x => x.id === card.dataset.id);
+  if(!map) return;
+  const action = button.dataset.action;
+  if(action === "open") openHtml(map.html);
+  if(action === "download") downloadHtml(map.html, map.title);
+  if(action === "delete") setMaps(maps.filter(x => x.id !== map.id));
+});
+document.getElementById("clearMaps").onclick = () => {
+  if(confirm("Удалить локальный список сохраненных карт?")) setMaps([]);
+};
+renderMaps();
 
 function parseWorkbook(wb){
   const rowsOut = [];
@@ -118,7 +243,7 @@ function aggregate(rows){
   const map = new Map();
   for(const r of rows){
     const key = mode === "coords" ? `${r.lat.toFixed(6)},${r.lon.toFixed(6)}` : (r.gid || `${r.lat.toFixed(6)},${r.lon.toFixed(6)}`);
-    if(!map.has(key)) map.set(key, {...r, key, rows:0});
+    if(!map.has(key)) map.set(key, {...r, key, contacts:0, plays:0, spend:0, rows:0});
     const x = map.get(key);
     x.contacts += r.contacts; x.plays += r.plays; x.spend += r.spend; x.rows += 1;
     if(!x.month.includes(r.month)) x.month = [x.month, r.month].filter(Boolean).join(", ");
@@ -181,11 +306,24 @@ document.getElementById("generate").onclick = async () => {
     const html = buildMap(points, title, metric);
     const blob = new Blob([html], {type:"text/html;charset=utf-8"});
     const url = URL.createObjectURL(blob);
+    latestMap = {html, title};
     const open = document.getElementById("openLink");
     const down = document.getElementById("downloadLink");
     open.href = url; down.href = url; down.download = safeName(title) + ".html"; open.style.display = down.style.display = "inline-block";
     const contacts = points.reduce((s,p)=>s+Number(p.contacts||0),0);
-    setLog(`Готово.\nИсходных строк: ${rows.length}\nТочек на карте: ${points.length}\nФакт OTS/контакты: ${contacts.toLocaleString("ru-RU")}\nОткрой карту или скачай HTML.`, "ok");
+    try{
+      saveMap({
+        id: (window.crypto && crypto.randomUUID ? crypto.randomUUID() : String(Date.now())),
+        title,
+        createdAt: Date.now(),
+        points: points.length,
+        contacts,
+        html
+      });
+      setLog(`Готово.\nИсходных строк: ${rows.length}\nТочек на карте: ${points.length}\nФакт OTS/контакты: ${contacts.toLocaleString("ru-RU")}\nКарта сохранена в разделе "Мои карты".`, "ok");
+    }catch(storageError){
+      setLog(`Готово, но браузер не дал сохранить карту в локальную библиотеку.\nИсходных строк: ${rows.length}\nТочек на карте: ${points.length}\nФакт OTS/контакты: ${contacts.toLocaleString("ru-RU")}\nСкачай HTML вручную.`, "ok");
+    }
   }catch(e){
     setLog("Ошибка: " + e.message, "err");
   }
