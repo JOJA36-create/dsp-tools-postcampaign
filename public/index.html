@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DSP Tools | Server prototype</title>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    :root{--maroon:#8b1e2d;--green:#0f3d2e;--ink:#111317;--warm:#f6f4ee;--paper:#fffdf8;--line:#ded8cc;--muted:#6f7480;--soft:#fbfaf6;--shadow:0 18px 42px rgba(17,19,23,.10)}
+    *{box-sizing:border-box}body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--warm);color:var(--ink)}body:before{content:"";position:fixed;inset:0;pointer-events:none;background:radial-gradient(circle at 86% 2%,rgba(139,30,45,.12),transparent 32%),radial-gradient(circle at 2% 18%,rgba(15,61,46,.12),transparent 28%)}
+    button,input,select{font:inherit}button{cursor:pointer}.hidden{display:none!important}.brand-word{display:flex;align-items:center;gap:14px;color:var(--green);font-weight:900;letter-spacing:.1em;text-transform:uppercase}.mark{display:grid;place-items:center;width:48px;height:48px;border-radius:8px;background:var(--maroon);color:#fff;font-size:20px;box-shadow:inset 0 -5px 0 rgba(0,0,0,.16)}.brand-word small{display:block;margin-top:3px;color:#6d7a72;font-size:11px;letter-spacing:.14em}.eyebrow{color:var(--maroon);font-size:12px;font-weight:900;letter-spacing:.18em;text-transform:uppercase}.sub{margin:0;color:var(--muted);line-height:1.45}.muted{color:var(--muted);font-size:12px}.hint{font-size:12px;color:var(--muted);line-height:1.45;margin-top:14px}
+    .login{min-height:100vh;display:grid;grid-template-columns:1fr 430px;position:relative}.brand-stage{padding:42px;display:flex;flex-direction:column;justify-content:space-between;min-height:100vh}.statement{max-width:760px}.statement h1{margin:14px 0 16px;font-size:58px;line-height:.98}.statement p{max-width:620px;margin:0;color:#4f5963;font-size:18px;line-height:1.5}.login-card{margin:26px;align-self:center;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:26px;box-shadow:var(--shadow)}
+    h2{margin:0 0 8px;font-size:24px}.field{display:grid;gap:7px;margin-top:16px}label{font-size:13px;color:#657080}input,select{width:100%;border:1px solid #d6dce5;border-radius:7px;background:#fff;padding:11px 12px;color:var(--ink)}.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--green);background:var(--green);color:#fff;border-radius:7px;padding:11px 15px;font-weight:800;text-decoration:none}.btn.maroon{border-color:var(--maroon);background:var(--maroon)}.btn.ghost{background:#fff;color:var(--green);border-color:var(--green)}.btn.light{border-color:#aeb8ad;background:#fff;color:var(--green)}.btn.danger{border-color:#bf8d96;background:#fff;color:var(--maroon)}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+    .portal{min-height:100vh;position:relative}.topbar{height:70px;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 28px;box-shadow:0 12px 30px rgba(17,19,23,.14)}.topbar .brand-word{color:#fff}.topbar .brand-word small{color:#d8e3d9}.userbar{display:flex;align-items:center;gap:10px}.pill{border:1px solid rgba(255,255,255,.24);border-radius:999px;padding:8px 12px;font-size:12px;color:#eef5ef}
+    .shell{max-width:1460px;margin:0 auto;padding:24px;display:grid;grid-template-columns:286px 1fr;gap:22px}.side{background:rgba(255,255,255,.78);border:1px solid var(--line);border-radius:8px;padding:18px;align-self:start;box-shadow:var(--shadow)}.section-title{margin:0 0 12px;font-size:12px;text-transform:uppercase;letter-spacing:.18em}.nav{display:grid;gap:8px}.nav button{justify-content:flex-start;width:100%;background:#fff;color:var(--ink);border:1px solid var(--line)}.nav button.active{background:var(--green);border-color:var(--green);color:#fff}.main{display:grid;gap:18px}.view{display:none}.view.active{display:grid;gap:18px}
+    .workspace{display:grid;grid-template-columns:1.05fr .95fr;gap:18px}.panel{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:22px;box-shadow:var(--shadow)}.compact-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:16px}.compact-head h1{margin:6px 0 8px;font-size:32px;line-height:1.08}.metrics{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.metric{border:1px solid #cfc6b8;border-radius:8px;background:#fff;padding:14px;box-shadow:0 6px 16px rgba(17,19,23,.05)}.metric b{display:block;font-size:24px}.metric span{font-size:12px;color:#59606a}.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.upload{border:1.5px dashed #9e9181;background:#fff;border-radius:8px;padding:20px;margin-top:18px}.summary{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}.summary .metric b{font-size:20px}.security-list{display:grid;gap:8px;margin-top:12px}.security-list div{border:1px solid #cfc6b8;border-radius:8px;background:#fff;padding:11px;font-size:13px;color:var(--green);font-weight:700}
+    .toolbar{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:14px}.search{max-width:320px}.table{width:100%;border-collapse:separate;border-spacing:0 8px}.table th{text-align:left;font-size:12px;color:var(--muted);font-weight:700;padding:0 12px}.table td{background:#fff;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:12px}.table td:first-child{border-left:1px solid var(--line);border-radius:8px 0 0 8px}.table td:last-child{border-right:1px solid var(--line);border-radius:0 8px 8px 0}.map-name{font-weight:800}.card-list{display:grid;gap:8px}.recent-card{display:grid;grid-template-columns:28px 1fr;gap:10px;align-items:center;border:1px solid #cfc6b8;background:#fff;border-radius:8px;padding:9px 10px}.recent-index{display:grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--maroon);color:#fff;font-weight:900;font-size:12px}.recent-main{min-width:0}.recent-top{display:flex;align-items:center;justify-content:space-between;gap:10px}.recent-title{font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.recent-card .actions{margin-top:0;flex-wrap:nowrap}.recent-card .btn{padding:7px 10px;font-size:12px}.empty{border:1px dashed #b8ad9f;border-radius:8px;background:#fff;padding:16px;color:var(--muted)}.log{margin-top:14px;padding:12px;border-radius:8px;border:1px solid var(--line);background:#fff;color:#344054;line-height:1.45}.ok{border-color:#bbd8c0;background:#effaf1}.err{border-color:#e8b6bf;background:#fff1f3;color:#8b1e2d}
+    .map-app{display:grid;grid-template-columns:350px 1fr;min-height:100vh;background:#eef3f8}.map-aside{background:#fff;border-right:1px solid #d7dde5;padding:18px;max-height:100vh;overflow:auto}.map-aside h1{font-size:20px;margin:0 0 8px}.stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:14px 0}.stat{border:1px solid #d7dde5;border-radius:8px;padding:10px;background:#fbfcfd}.stat b{display:block;font-size:18px}.stat span{font-size:12px;color:#667085}.map-aside select,.map-aside input{margin:6px 0 12px}.toggle{display:flex;gap:8px;align-items:center;margin:4px 0 12px;color:#344054;font-size:13px}.toggle input{width:auto;margin:0}.legend{display:grid;gap:8px;margin-top:10px;font-size:13px}.legend div{display:flex;gap:8px;align-items:center}.dot{width:12px;height:12px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px #999}.note{margin-top:12px;padding:10px;border-radius:8px;background:#f8fafc;border:1px solid #d7dde5;color:#667085;font-size:12px;line-height:1.4}#map{height:100vh;width:100%;background:#e8eef4}.card{position:absolute;right:16px;top:16px;z-index:1000;width:min(410px,calc(100% - 32px));max-height:calc(100vh - 32px);overflow:auto;background:white;border:1px solid #d7dde5;border-radius:8px;box-shadow:0 14px 36px rgba(15,23,42,.2);padding:14px;display:none}.card.visible{display:block}.close{position:absolute;right:10px;top:10px;width:26px;height:26px;border-radius:50%;border:1px solid #d7dde5;display:grid;place-items:center;cursor:pointer}.row{display:flex;justify-content:space-between;gap:12px;border-top:1px solid #edf0f3;padding:6px 0;font-size:13px}.row span:first-child{color:#667085}.rank-marker{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;color:white;font-weight:800;font-size:13px;border:2px solid #fff;box-shadow:0 4px 14px rgba(15,23,42,.35)}.rank-1{background:#60a5fa}.rank-2{background:#22c55e}.rank-3{background:#eab308}.rank-4{background:#f97316}.rank-5{background:#ef4444}
+    @media(max-width:1050px){.login,.shell,.workspace,.grid,.map-app{grid-template-columns:1fr}.summary{grid-template-columns:1fr 1fr}.brand-stage{min-height:auto}.statement h1{font-size:38px}.topbar{height:auto;gap:14px;align-items:flex-start;flex-direction:column;padding:18px}.table{display:block;overflow:auto}#map{height:72vh}}
+  </style>
+</head>
+<body>
+  <section id="login" class="login hidden">
+    <div class="brand-stage">
+      <div class="brand-word"><div class="mark">DSP</div><div>DSP Tools<small>Post-campaign heatmaps</small></div></div>
+      <div class="statement"><div class="eyebrow">OOH post-campaign control</div><h1>Портал для карт фактической открутки pDOOH.</h1><p>Серверный прототип: карты сохраняются в базе-файле и получают постоянные клиентские ссылки.</p></div>
+    </div>
+    <div class="login-card">
+      <div class="eyebrow">Secure workspace</div><h2>Вход в DSP Tools</h2><p class="sub">Демо-экран будущей авторизации. Сейчас пароль не проверяется.</p>
+      <div class="field"><label>Email</label><input value="evgeny@agency.ru"></div>
+      <div class="field"><label>Пароль</label><input type="password" value="demo-password"></div>
+      <div class="actions"><button class="btn maroon" id="loginBtn">Войти в портал</button></div>
+    </div>
+  </section>
+
+  <section id="portal" class="portal hidden">
+    <header class="topbar"><div class="brand-word"><div class="mark">DSP</div><div>DSP Tools<small>Post-campaign heatmaps</small></div></div><div class="userbar"><span class="pill">Server prototype</span><span class="pill">evgeny@agency.ru</span><button class="btn ghost" id="logoutBtn">Выйти</button></div></header>
+    <div class="shell">
+      <aside class="side"><p class="section-title">Навигация</p><div class="nav"><button class="btn active" data-view="create">Создать карту</button><button class="btn" data-view="maps">Все карты</button><button class="btn" data-view="team">Команда</button></div><div class="security-list"><div>Клиент видит только карту по отдельной ссылке.</div></div></aside>
+      <main class="main">
+        <section id="create" class="view active">
+          <div class="compact-head panel"><div><div class="eyebrow">DSP Tools v0.4</div><h1>Создать карту</h1><p class="sub">Загрузите отчет, проверьте сводку и сохраните карту на сервере.</p></div><div class="metrics"><div class="metric"><b id="totalMaps">0</b><span>карт на сервере</span></div><div class="metric"><b id="totalLinks">0</b><span>клиентских ссылок</span></div></div></div>
+          <div class="workspace">
+            <div class="panel">
+              <h2>Новая карта</h2><p class="sub">После загрузки файла здесь будет сводка по точкам, OTS, выходам и деньгам.</p>
+              <div class="grid"><div class="field"><label for="mapTitle">Название карты</label><input id="mapTitle" value="Итоги открутки pDOOH | Июль"></div><div class="field"><label for="clientName">Клиент</label><input id="clientName" value="Demo Client"></div></div>
+              <div class="upload"><b>Excel-отчет</b><p class="sub">Карта получит переключение группировки по выходам, контактам и средствам уже внутри просмотра.</p><input id="fileInput" type="file" accept=".xlsx,.xls" style="margin-top:14px"><div class="actions"><button class="btn maroon" id="createMap">Создать карту</button></div></div>
+              <div id="fileSummary" class="summary hidden"></div><div id="log" class="log">Файл еще не загружен.</div>
+            </div>
+            <div class="panel"><div class="toolbar"><div><h2>Последние карты</h2><p class="sub">Открыть клиентскую ссылку, скопировать ее или удалить карту.</p></div></div><div id="latestCards" class="card-list"></div></div>
+          </div>
+        </section>
+        <section id="maps" class="view"><div class="panel"><div class="toolbar"><div><h2>Все карты</h2><p class="sub">Карты сохраняются в `data/maps.json` на сервере.</p></div><input class="search" id="mapSearch" placeholder="Поиск по клиенту или кампании"></div><table class="table"><thead><tr><th>Карта</th><th>Клиент</th><th>Создал</th><th>Дата</th><th></th></tr></thead><tbody id="mapRows"></tbody></table></div></section>
+        <section id="team" class="view"><div class="panel"><h2>Команда</h2><p class="sub">Будущий раздел для коллег и ролей доступа.</p><table class="table"><tbody><tr><td><div class="map-name">Евгений</div><div class="muted">evgeny@agency.ru</div></td><td>Администратор</td><td><button class="btn light">Изменить</button></td></tr><tr><td><div class="map-name">Media Planner</div><div class="muted">planner@agency.ru</div></td><td>Редактор</td><td><button class="btn light">Изменить</button></td></tr></tbody></table></div></section>
+      </main>
+    </div>
+  </section>
+
+  <section id="mapView" class="hidden"></section>
+
+  <script>
+    let parsedRows = [];
+    let parsedPoints = [];
+    let mapsCache = [];
+    let activeLeafletMap = null;
+
+    function num(v){ if(v == null || v === "") return null; const x = Number(String(v).replace(/\s/g,"").replace(",", ".")); return Number.isFinite(x) ? x : null; }
+    function norm(s){ return String(s || "").toLowerCase().replace(/ё/g,"е").replace(/[.,()"«»]/g," ").replace(/\s+/g," ").trim(); }
+    function findCol(headers, variants){ return headers.findIndex(h => variants.some(v => norm(h).includes(norm(v)))); }
+    function escHtml(s){ return String(s ?? "").replace(/[&<>"]/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[ch])); }
+    function fmt(v){ return new Intl.NumberFormat("ru-RU", {maximumFractionDigits:0}).format(v || 0); }
+    function money(v){ return new Intl.NumberFormat("ru-RU", {maximumFractionDigits:0}).format(v || 0) + " ₽"; }
+    function compact(v){ if(v >= 1000000) return (v/1000000).toFixed(v >= 10000000 ? 1 : 2).replace(".", ",") + "M"; return fmt(v); }
+    function setLog(text, cls=""){ const log = document.getElementById("log"); log.className = "log " + cls; log.textContent = text; }
+
+    async function api(path, options = {}) {
+      const res = await fetch(path, { headers: { "Content-Type": "application/json" }, ...options });
+      if (!res.ok) throw new Error((await res.json()).error || "Ошибка API");
+      return res.json();
+    }
+
+    function parseWorkbook(wb){
+      const rowsOut = [];
+      for(const name of wb.SheetNames){
+        const rows = XLSX.utils.sheet_to_json(wb.Sheets[name], {header:1, defval:""});
+        const headerIndex = rows.findIndex(r => r.some(c => norm(c).includes("широта")) && r.some(c => norm(c).includes("долгота")));
+        if(headerIndex < 0) continue;
+        const h = rows[headerIndex].map(String);
+        const c = { city:findCol(h,["Регион","Город","City"]), format:findCol(h,["Тип конструкции","Формат"]), gid:findCol(h,["GID","ID поверхности","Surface ID"]), address:findCol(h,["Адрес","Адрес поверхности"]), lat:findCol(h,["Широта","Latitude","Lat"]), lon:findCol(h,["Долгота","Longitude","Lon","Lng"]), month:findCol(h,["Месяц","Период"]), plays:findCol(h,["Количество выходов","Выходы","Plays"]), contacts:findCol(h,["Количество контактов","Контакты","OTS","Impressions"]), spend:findCol(h,["Потрачено средств","Spend","Стоимость"]) };
+        for(let r=headerIndex+1; r<rows.length; r++){
+          const row = rows[r], lat = num(row[c.lat]), lon = num(row[c.lon]);
+          if(lat == null || lon == null) continue;
+          const item = { city:String(row[c.city]||""), format:String(row[c.format]||""), gid:String(row[c.gid]||""), address:String(row[c.address]||""), lat, lon, month:String(row[c.month]||""), plays:num(row[c.plays])||0, contacts:num(row[c.contacts])||0, spend:num(row[c.spend])||0 };
+          if(item.city && item.address) rowsOut.push(item);
+        }
+      }
+      return rowsOut;
+    }
+
+    function aggregate(rows){
+      const map = new Map();
+      for(const r of rows){
+        const key = r.gid || `${r.lat.toFixed(6)},${r.lon.toFixed(6)}`;
+        if(!map.has(key)) map.set(key, {...r, key, contacts:0, plays:0, spend:0, rows:0});
+        const x = map.get(key);
+        x.contacts += r.contacts; x.plays += r.plays; x.spend += r.spend; x.rows += 1;
+        if(!x.month.includes(r.month)) x.month = [x.month, r.month].filter(Boolean).join(", ");
+      }
+      return [...map.values()];
+    }
+
+    function summarize(rows, points){
+      return { rows: rows.length, points: points.length, contacts: points.reduce((s,p)=>s+Number(p.contacts||0),0), plays: points.reduce((s,p)=>s+Number(p.plays||0),0), spend: points.reduce((s,p)=>s+Number(p.spend||0),0), cities: new Set(points.map(p=>p.city).filter(Boolean)).size, formats: new Set(points.map(p=>p.format).filter(Boolean)).size };
+    }
+
+    function renderSummary(s){
+      const box = document.getElementById("fileSummary");
+      box.classList.remove("hidden");
+      box.innerHTML = `<div class="metric"><b>${fmt(s.points)}</b><span>точек загрузилось</span></div><div class="metric"><b>${compact(s.contacts)}</b><span>фактические OTS</span></div><div class="metric"><b>${fmt(s.plays)}</b><span>выходов</span></div><div class="metric"><b>${money(s.spend)}</b><span>сумма по деньгам</span></div><div class="metric"><b>${fmt(s.cities)}</b><span>городов</span></div><div class="metric"><b>${fmt(s.formats)}</b><span>форматов</span></div>`;
+    }
+
+    function route(){
+      const match = location.pathname.match(/^\/map\/([^/]+)$/);
+      if(match) return showPublicMap(match[1]);
+      document.getElementById("mapView").classList.add("hidden");
+      document.getElementById("login").classList.remove("hidden");
+    }
+
+    async function loadMaps(){
+      mapsCache = await api("/api/maps");
+      renderRows();
+    }
+
+    function publicUrl(id){ return `${location.origin}/map/${id}`; }
+    function recentCard(map, index){
+      return `<div class="recent-card"><div class="recent-index">${index+1}</div><div class="recent-main"><div class="recent-top"><div class="recent-title">${escHtml(map.title)}</div><div class="actions"><button class="btn ghost" data-open="${map.id}">Открыть</button><button class="btn light" data-copy="${map.id}">Скопировать</button><button class="btn danger" data-delete="${map.id}">Удалить</button></div></div><div class="muted">${escHtml(map.client)} · ${new Date(map.createdAt).toLocaleDateString("ru-RU")} · ${compact(map.contacts)} OTS</div></div></div>`;
+    }
+    function row(map){
+      return `<tr><td><div class="map-name">${escHtml(map.title)}</div><div class="muted">${compact(map.contacts)} OTS · ${fmt(map.pointsCount)} точек · ${fmt(map.citiesCount)} городов</div></td><td>${escHtml(map.client)}</td><td>${escHtml(map.owner)}</td><td>${new Date(map.createdAt).toLocaleDateString("ru-RU")}</td><td><div class="actions"><button class="btn ghost" data-open="${map.id}">Открыть</button><button class="btn light" data-copy="${map.id}">Скопировать</button><button class="btn danger" data-delete="${map.id}">Удалить</button></div></td></tr>`;
+    }
+    function bindMapActions(){
+      document.querySelectorAll("[data-open]").forEach(btn => btn.onclick = () => window.open(publicUrl(btn.dataset.open), "_blank"));
+      document.querySelectorAll("[data-copy]").forEach(btn => btn.onclick = async () => { await navigator.clipboard.writeText(publicUrl(btn.dataset.copy)); btn.textContent = "Скопировано"; });
+      document.querySelectorAll("[data-delete]").forEach(btn => btn.onclick = async () => { await api(`/api/maps/${btn.dataset.delete}`, { method:"DELETE" }); await loadMaps(); });
+    }
+    function renderRows(filter=""){
+      document.getElementById("totalMaps").textContent = fmt(mapsCache.length);
+      document.getElementById("totalLinks").textContent = fmt(mapsCache.length);
+      const q = filter.toLowerCase();
+      const filtered = mapsCache.filter(m => [m.title,m.client,m.owner].join(" ").toLowerCase().includes(q));
+      document.getElementById("latestCards").innerHTML = mapsCache.length ? mapsCache.slice(0,3).map(recentCard).join("") : '<div class="empty">Пока карт нет. Загрузи отчет и создай первую карту.</div>';
+      document.getElementById("mapRows").innerHTML = filtered.map(row).join("");
+      bindMapActions();
+    }
+
+    async function showPublicMap(id){
+      document.getElementById("login").classList.add("hidden");
+      document.getElementById("portal").classList.add("hidden");
+      const wrap = document.getElementById("mapView");
+      wrap.classList.remove("hidden");
+      const mapData = await api(`/api/maps/${id}`);
+      wrap.innerHTML = `<div class="map-app"><aside class="map-aside"><h1>${escHtml(mapData.title)}</h1><div class="sub">Клиентский просмотр карты.</div><div class="stats"><div class="stat"><b id="visibleCount">0</b><span>точек</span></div><div class="stat"><b id="totalContacts">0</b><span>факт OTS</span></div><div class="stat"><b id="totalPlays">0</b><span>выходов</span></div><div class="stat"><b id="totalSpend">0</b><span>потрачено</span></div></div><label>Город</label><select id="city"><option value="all">Все города</option></select><label>Формат</label><select id="format"><option value="all">Все форматы</option></select><label>Подложка</label><select id="basemap"><option value="osm">OSM</option><option value="light">Светлая</option><option value="dark">Темная</option><option value="satellite">Спутник</option></select><label>Группировка ореолов</label><select id="metric"><option value="contacts">По контактам / OTS</option><option value="plays">По выходам</option><option value="spend">По средствам</option></select><label class="toggle"><input id="halo" type="checkbox" checked>Показывать ореолы</label><label class="toggle"><input id="rankLabels" type="checkbox" checked>Показывать рейтинг 1-5</label><label>Поиск</label><input id="search" placeholder="Адрес или GID"><div class="legend"><div><span class="dot" style="background:#ef4444"></span>5 — максимум в городе</div><div><span class="dot" style="background:#60a5fa"></span>1 — минимум</div></div><div class="note">Рейтинг считается отдельно внутри каждого города и пересчитывается при смене группировки.</div></aside><main style="position:relative"><div id="map"></div><div class="card" id="card"><div class="close" id="close">×</div><div id="cardBody"></div></div></main></div>`;
+      renderLeaflet(mapData.points);
+    }
+
+    function renderLeaflet(points){
+      if(activeLeafletMap) activeLeafletMap.remove();
+      const city = document.getElementById("city"), format = document.getElementById("format"), basemap = document.getElementById("basemap"), metric = document.getElementById("metric"), halo = document.getElementById("halo"), rankLabels = document.getElementById("rankLabels"), search = document.getElementById("search"), card = document.getElementById("card"), cardBody = document.getElementById("cardBody");
+      function uniq(a){return[...new Set(a.filter(Boolean))].sort((x,y)=>x.localeCompare(y,"ru"))}
+      function opt(s,v){const o=document.createElement("option");o.value=v;o.textContent=v;s.appendChild(o)}
+      uniq(points.map(p=>p.city)).forEach(v=>opt(city,v)); uniq(points.map(p=>p.format)).forEach(v=>opt(format,v));
+      activeLeafletMap = L.map("map",{preferCanvas:false,attributionControl:false});
+      const bases = { osm:L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19}), light:L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",{maxZoom:20}), dark:L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",{maxZoom:20}), satellite:L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",{maxZoom:19}) };
+      let activeBase = bases.osm.addTo(activeLeafletMap); basemap.onchange = () => { activeLeafletMap.removeLayer(activeBase); activeBase = bases[basemap.value].addTo(activeLeafletMap); };
+      const layer = L.layerGroup().addTo(activeLeafletMap);
+      function color(r){return ["","#60a5fa","#22c55e","#eab308","#f97316","#ef4444"][r]||"#2563eb"}
+      function current(){const q=search.value.toLowerCase();return points.filter(p=>(city.value==="all"||p.city===city.value)&&(format.value==="all"||p.format===format.value)&&(!q||[p.address,p.gid].join(" ").toLowerCase().includes(q)))}
+      function recalc(){const byCity={};points.forEach(p=>{const c=p.city||"Без города";(byCity[c]||(byCity[c]=[])).push(p)});Object.values(byCity).forEach(group=>{const vals=group.map(p=>Number(p[metric.value]||0)).sort((a,b)=>a-b),max=Math.max(1,...vals);group.forEach(p=>{const v=Number(p[metric.value]||0);const idx=vals.findIndex(x=>x>=v);const pct=(idx<0?1:idx/Math.max(1,vals.length-1));p.liveScore=Math.max(.05,v/max);p.liveRating=Math.min(5,Math.max(1,Math.floor(pct*5)+1))})})}
+      function cardHtml(p){return `<h2>${escHtml(p.address)}</h2>${[["Рейтинг",p.liveRating],["Город",p.city],["Формат",p.format],["GID",p.gid],["Факт OTS",fmt(p.contacts)],["Выходов",fmt(p.plays)],["Потрачено",money(p.spend)]].map(r=>`<div class="row"><span>${r[0]}</span><b>${escHtml(r[1])}</b></div>`).join("")}`}
+      function render(){recalc();const f=current();layer.clearLayers();let contacts=0,plays=0,spend=0,b=[];f.forEach(p=>{contacts+=Number(p.contacts||0);plays+=Number(p.plays||0);spend+=Number(p.spend||0);const rank=p.liveRating,col=color(rank),rs=7+rank*3+p.liveScore*8,hs=rs+16+p.liveScore*34;if(halo.checked){L.circleMarker([p.lat,p.lon],{radius:hs,color:col,weight:0,fillColor:col,fillOpacity:.20,interactive:false}).addTo(layer);L.circleMarker([p.lat,p.lon],{radius:hs*.55,color:col,weight:0,fillColor:col,fillOpacity:.13,interactive:false}).addTo(layer)}let marker;if(rankLabels.checked){marker=L.marker([p.lat,p.lon],{icon:L.divIcon({className:"",html:`<div class="rank-marker rank-${rank}">${rank}</div>`,iconSize:[28,28],iconAnchor:[14,14]})}).addTo(layer)}else{marker=L.circleMarker([p.lat,p.lon],{radius:rs,color:"#fff",weight:2,fillColor:col,fillOpacity:.95}).addTo(layer)}marker.bindPopup(cardHtml(p),{maxWidth:380});marker.on("click",()=>{cardBody.innerHTML=cardHtml(p);card.classList.add("visible")});b.push([p.lat,p.lon])});document.getElementById("visibleCount").textContent=fmt(f.length);document.getElementById("totalContacts").textContent=fmt(contacts);document.getElementById("totalPlays").textContent=fmt(plays);document.getElementById("totalSpend").textContent=money(spend);if(b.length)activeLeafletMap.fitBounds(b,{padding:[34,34],maxZoom:12})}
+      document.getElementById("close").onclick=()=>card.classList.remove("visible");city.onchange=format.onchange=metric.onchange=halo.onchange=rankLabels.onchange=search.oninput=render;render();
+    }
+
+    document.querySelectorAll(".nav button").forEach(btn => btn.onclick = () => { document.querySelectorAll(".nav button").forEach(x => x.classList.remove("active")); document.querySelectorAll(".view").forEach(x => x.classList.remove("active")); btn.classList.add("active"); document.getElementById(btn.dataset.view).classList.add("active"); });
+    document.getElementById("loginBtn").onclick = async () => { document.getElementById("login").classList.add("hidden"); document.getElementById("portal").classList.remove("hidden"); await loadMaps(); };
+    document.getElementById("logoutBtn").onclick = () => { document.getElementById("portal").classList.add("hidden"); document.getElementById("login").classList.remove("hidden"); };
+    document.getElementById("fileInput").onchange = async e => { const file=e.target.files[0]; if(!file) return; setLog("Читаю отчет..."); try{const wb=XLSX.read(await file.arrayBuffer(),{type:"array"}); parsedRows=parseWorkbook(wb); if(!parsedRows.length) throw new Error("Не нашел таблицу с координатами и факт OTS/контактами."); parsedPoints=aggregate(parsedRows); renderSummary(summarize(parsedRows, parsedPoints)); setLog("Файл загружен. Можно создавать карту.", "ok");}catch(err){parsedRows=[];parsedPoints=[];setLog("Ошибка: "+err.message,"err")}};
+    document.getElementById("createMap").onclick = async () => { if(!parsedPoints.length){setLog("Сначала загрузи Excel-отчет.","err");return} try{const map=await api("/api/maps",{method:"POST",body:JSON.stringify({title:document.getElementById("mapTitle").value,client:document.getElementById("clientName").value,points:parsedPoints})}); setLog(`Карта создана. Клиентская ссылка: ${publicUrl(map.id)}`,"ok"); await loadMaps();}catch(err){setLog("Ошибка: "+err.message,"err")} };
+    document.getElementById("mapSearch").oninput = e => renderRows(e.target.value);
+    route();
+  </script>
+</body>
+</html>
