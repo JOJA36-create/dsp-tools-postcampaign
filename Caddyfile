@@ -1,0 +1,3 @@
+dsptools.ru {
+  reverse_proxy dsp-tools:8787
+}
