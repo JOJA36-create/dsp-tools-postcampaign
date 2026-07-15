@@ -1,4 +1,4 @@
-# DSP Tools v0.4.1 Server Prototype
+# DSP Tools v0.4.2 Server Prototype
 
 Локальный серверный прототип портала DSP Tools для post-campaign pDOOH heatmaps.
 
