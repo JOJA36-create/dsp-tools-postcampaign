@@ -9,6 +9,12 @@ const ROOT = __dirname;
 const PUBLIC = path.join(ROOT, "public");
 const DATA = path.join(ROOT, "data");
 const DB = path.join(DATA, "maps.json");
+const PORTAL_USER = process.env.PORTAL_USER || "evgeny@agency.ru";
+const PORTAL_PASSWORD = process.env.PORTAL_PASSWORD || "demo-password";
+const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
+const SESSION_COOKIE = "dsp_session";
+const sessions = new Map();
+const loginAttempts = new Map();
 
 if (!fs.existsSync(DATA)) fs.mkdirSync(DATA, { recursive: true });
 if (!fs.existsSync(DB)) fs.writeFileSync(DB, "[]", "utf8");
@@ -25,12 +31,74 @@ function writeMaps(maps) {
   fs.writeFileSync(DB, JSON.stringify(maps, null, 2), "utf8");
 }
 
-function send(res, status, body, type = "application/json; charset=utf-8") {
+function send(res, status, body, type = "application/json; charset=utf-8", headers = {}) {
   res.writeHead(status, {
     "Content-Type": type,
-    "Cache-Control": "no-store"
+    "Cache-Control": "no-store",
+    ...headers
   });
   res.end(typeof body === "string" ? body : JSON.stringify(body));
+}
+
+function safeEqual(left, right) {
+  const a = crypto.createHash("sha256").update(String(left)).digest();
+  const b = crypto.createHash("sha256").update(String(right)).digest();
+  return crypto.timingSafeEqual(a, b);
+}
+
+function parseCookies(req) {
+  return Object.fromEntries(String(req.headers.cookie || "").split(";").map(item => {
+    const index = item.indexOf("=");
+    if (index < 0) return ["", ""];
+    return [item.slice(0, index).trim(), decodeURIComponent(item.slice(index + 1))];
+  }).filter(([key]) => key));
+}
+
+function getSession(req) {
+  const token = parseCookies(req)[SESSION_COOKIE];
+  const session = token && sessions.get(token);
+  if (!session) return null;
+  if (session.expiresAt <= Date.now()) {
+    sessions.delete(token);
+    return null;
+  }
+  session.expiresAt = Date.now() + SESSION_TTL_MS;
+  return session;
+}
+
+function sessionCookie(req, token, maxAge) {
+  const secure = String(req.headers["x-forwarded-proto"] || "").split(",")[0].trim() === "https";
+  return `${SESSION_COOKIE}=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}${secure ? "; Secure" : ""}`;
+}
+
+function requireSession(req, res) {
+  const session = getSession(req);
+  if (!session) {
+    send(res, 401, { error: "Требуется вход в портал" });
+    return null;
+  }
+  return session;
+}
+
+function loginKey(req) {
+  return String(req.headers["x-forwarded-for"] || req.socket.remoteAddress || "unknown").split(",")[0].trim();
+}
+
+function loginAllowed(req) {
+  const key = loginKey(req);
+  const attempt = loginAttempts.get(key);
+  if (!attempt || attempt.resetAt <= Date.now()) {
+    loginAttempts.set(key, { count: 0, resetAt: Date.now() + 10 * 60 * 1000 });
+    return true;
+  }
+  return attempt.count < 10;
+}
+
+function recordFailedLogin(req) {
+  const key = loginKey(req);
+  const attempt = loginAttempts.get(key) || { count: 0, resetAt: Date.now() + 10 * 60 * 1000 };
+  attempt.count += 1;
+  loginAttempts.set(key, attempt);
 }
 
 function readBody(req) {
@@ -81,11 +149,47 @@ function serveStatic(req, res) {
 async function handleApi(req, res, url) {
   const maps = readMaps();
 
+  if (req.method === "POST" && url.pathname === "/api/auth/login") {
+    if (!loginAllowed(req)) return send(res, 429, { error: "Слишком много попыток. Повторите через 10 минут" });
+    const payload = JSON.parse(await readBody(req) || "{}");
+    if (!safeEqual(payload.username || "", PORTAL_USER) || !safeEqual(payload.password || "", PORTAL_PASSWORD)) {
+      recordFailedLogin(req);
+      return send(res, 401, { error: "Неверный логин или пароль" });
+    }
+    loginAttempts.delete(loginKey(req));
+    const token = crypto.randomBytes(32).toString("base64url");
+    sessions.set(token, { username: PORTAL_USER, expiresAt: Date.now() + SESSION_TTL_MS });
+    return send(res, 200, { username: PORTAL_USER }, "application/json; charset=utf-8", {
+      "Set-Cookie": sessionCookie(req, token, Math.floor(SESSION_TTL_MS / 1000))
+    });
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/auth/logout") {
+    const token = parseCookies(req)[SESSION_COOKIE];
+    if (token) sessions.delete(token);
+    return send(res, 200, { ok: true }, "application/json; charset=utf-8", {
+      "Set-Cookie": sessionCookie(req, "", 0)
+    });
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/auth/session") {
+    const session = getSession(req);
+    return session ? send(res, 200, { username: session.username }) : send(res, 401, { error: "Нет активной сессии" });
+  }
+
+  const match = url.pathname.match(/^\/api\/maps\/([^/]+)$/);
+  if (match && req.method === "GET") {
+    const map = maps.find(item => item.id === match[1]);
+    return map ? send(res, 200, map) : send(res, 404, { error: "Карта не найдена" });
+  }
+
   if (req.method === "GET" && url.pathname === "/api/maps") {
+    if (!requireSession(req, res)) return;
     return send(res, 200, maps.map(({ points, ...map }) => map));
   }
 
   if (req.method === "POST" && url.pathname === "/api/maps") {
+    if (!requireSession(req, res)) return;
     const payload = JSON.parse(await readBody(req) || "{}");
     if (!payload.title || !Array.isArray(payload.points) || !payload.points.length) {
       return send(res, 400, { error: "Не хватает названия или точек карты" });
@@ -113,13 +217,8 @@ async function handleApi(req, res, url) {
     return send(res, 201, map);
   }
 
-  const match = url.pathname.match(/^\/api\/maps\/([^/]+)$/);
-  if (match && req.method === "GET") {
-    const map = maps.find(item => item.id === match[1]);
-    return map ? send(res, 200, map) : send(res, 404, { error: "Карта не найдена" });
-  }
-
   if (match && req.method === "DELETE") {
+    if (!requireSession(req, res)) return;
     const next = maps.filter(item => item.id !== match[1]);
     writeMaps(next);
     return send(res, 200, { ok: true });
@@ -142,4 +241,7 @@ const server = http.createServer(async (req, res) => {
 server.listen(PORT, HOST, () => {
   const shownHost = HOST === "0.0.0.0" ? "127.0.0.1" : HOST;
   console.log(`DSP Tools server: http://${shownHost}:${PORT}`);
+  if (PORTAL_PASSWORD === "demo-password") {
+    console.warn("WARNING: set PORTAL_PASSWORD before publishing the portal.");
+  }
 });

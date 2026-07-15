@@ -28,20 +28,20 @@
       <div class="statement"><div class="eyebrow">OOH post-campaign control</div><h1>Портал для карт фактической открутки pDOOH.</h1><p>Серверный прототип: карты сохраняются в базе-файле и получают постоянные клиентские ссылки.</p></div>
     </div>
     <div class="login-card">
-      <div class="eyebrow">Secure workspace</div><h2>Вход в DSP Tools</h2><p class="sub">Демо-экран будущей авторизации. Сейчас пароль не проверяется.</p>
-      <div class="field"><label>Email</label><input value="evgeny@agency.ru"></div>
-      <div class="field"><label>Пароль</label><input type="password" value="demo-password"></div>
+      <div class="eyebrow">Secure workspace</div><h2>Вход в DSP Tools</h2><p class="sub" id="loginStatus">Введите данные для доступа к рабочему порталу.</p>
+      <div class="field"><label for="loginUser">Email</label><input id="loginUser" autocomplete="username" value="evgeny@agency.ru"></div>
+      <div class="field"><label for="loginPassword">Пароль</label><input id="loginPassword" type="password" autocomplete="current-password"></div>
       <div class="actions"><button class="btn maroon" id="loginBtn">Войти в портал</button></div>
     </div>
   </section>
 
   <section id="portal" class="portal hidden">
-    <header class="topbar"><div class="brand-word"><div class="mark">DSP</div><div>DSP Tools<small>Post-campaign heatmaps</small></div></div><div class="userbar"><span class="pill">Server prototype</span><span class="pill">evgeny@agency.ru</span><button class="btn ghost" id="logoutBtn">Выйти</button></div></header>
+    <header class="topbar"><div class="brand-word"><div class="mark">DSP</div><div>DSP Tools<small>Post-campaign heatmaps</small></div></div><div class="userbar"><span class="pill">Server prototype</span><span class="pill" id="portalUser"></span><button class="btn ghost" id="logoutBtn">Выйти</button></div></header>
     <div class="shell">
       <aside class="side"><p class="section-title">Навигация</p><div class="nav"><button class="btn active" data-view="create">Создать карту</button><button class="btn" data-view="maps">Все карты</button><button class="btn" data-view="team">Команда</button></div><div class="security-list"><div>Клиент видит только карту по отдельной ссылке.</div></div></aside>
       <main class="main">
         <section id="create" class="view active">
-          <div class="compact-head panel"><div><div class="eyebrow">DSP Tools v0.4</div><h1>Создать карту</h1><p class="sub">Загрузите отчет, проверьте сводку и сохраните карту на сервере.</p></div><div class="metrics"><div class="metric"><b id="totalMaps">0</b><span>карт на сервере</span></div><div class="metric"><b id="totalLinks">0</b><span>клиентских ссылок</span></div></div></div>
+          <div class="compact-head panel"><div><div class="eyebrow">DSP Tools v0.5</div><h1>Создать карту</h1><p class="sub">Загрузите отчет, проверьте сводку и сохраните карту на сервере.</p></div><div class="metrics"><div class="metric"><b id="totalMaps">0</b><span>карт на сервере</span></div><div class="metric"><b id="totalLinks">0</b><span>клиентских ссылок</span></div></div></div>
           <div class="workspace">
             <div class="panel">
               <h2>Новая карта</h2><p class="sub">После загрузки файла здесь будет сводка по точкам, OTS, выходам и деньгам.</p>
@@ -76,9 +76,23 @@
     function setLog(text, cls=""){ const log = document.getElementById("log"); log.className = "log " + cls; log.textContent = text; }
 
     async function api(path, options = {}) {
-      const res = await fetch(path, { headers: { "Content-Type": "application/json" }, ...options });
+      const res = await fetch(path, { credentials:"same-origin", headers: { "Content-Type": "application/json" }, ...options });
       if (!res.ok) throw new Error((await res.json()).error || "Ошибка API");
       return res.json();
+    }
+
+    function showLogin(message=""){
+      document.getElementById("portal").classList.add("hidden");
+      document.getElementById("mapView").classList.add("hidden");
+      document.getElementById("login").classList.remove("hidden");
+      document.getElementById("loginStatus").textContent = message || "Введите данные для доступа к рабочему порталу.";
+    }
+
+    async function showPortal(session){
+      document.getElementById("login").classList.add("hidden");
+      document.getElementById("portal").classList.remove("hidden");
+      document.getElementById("portalUser").textContent = session.username;
+      await loadMaps();
     }
 
     function parseWorkbook(wb){
@@ -121,11 +135,11 @@
       box.innerHTML = `<div class="metric"><b>${fmt(s.points)}</b><span>точек загрузилось</span></div><div class="metric"><b>${compact(s.contacts)}</b><span>фактические OTS</span></div><div class="metric"><b>${fmt(s.plays)}</b><span>выходов</span></div><div class="metric"><b>${money(s.spend)}</b><span>сумма по деньгам</span></div><div class="metric"><b>${fmt(s.cities)}</b><span>городов</span></div><div class="metric"><b>${fmt(s.formats)}</b><span>форматов</span></div>`;
     }
 
-    function route(){
+    async function route(){
       const match = location.pathname.match(/^\/map\/([^/]+)$/);
       if(match) return showPublicMap(match[1]);
-      document.getElementById("mapView").classList.add("hidden");
-      document.getElementById("login").classList.remove("hidden");
+      try { await showPortal(await api("/api/auth/session")); }
+      catch { showLogin(); }
     }
 
     async function loadMaps(){
@@ -184,8 +198,21 @@
     }
 
     document.querySelectorAll(".nav button").forEach(btn => btn.onclick = () => { document.querySelectorAll(".nav button").forEach(x => x.classList.remove("active")); document.querySelectorAll(".view").forEach(x => x.classList.remove("active")); btn.classList.add("active"); document.getElementById(btn.dataset.view).classList.add("active"); });
-    document.getElementById("loginBtn").onclick = async () => { document.getElementById("login").classList.add("hidden"); document.getElementById("portal").classList.remove("hidden"); await loadMaps(); };
-    document.getElementById("logoutBtn").onclick = () => { document.getElementById("portal").classList.add("hidden"); document.getElementById("login").classList.remove("hidden"); };
+    document.getElementById("loginBtn").onclick = async () => {
+      const button = document.getElementById("loginBtn");
+      button.disabled = true;
+      try {
+        const session = await api("/api/auth/login", {method:"POST", body:JSON.stringify({username:document.getElementById("loginUser").value, password:document.getElementById("loginPassword").value})});
+        document.getElementById("loginPassword").value = "";
+        await showPortal(session);
+      } catch(err) {
+        showLogin(err.message);
+      } finally {
+        button.disabled = false;
+      }
+    };
+    document.getElementById("loginPassword").onkeydown = event => { if(event.key === "Enter") document.getElementById("loginBtn").click(); };
+    document.getElementById("logoutBtn").onclick = async () => { try { await api("/api/auth/logout", {method:"POST"}); } finally { showLogin("Вы вышли из портала."); } };
     document.getElementById("fileInput").onchange = async e => { const file=e.target.files[0]; if(!file) return; setLog("Читаю отчет..."); try{const wb=XLSX.read(await file.arrayBuffer(),{type:"array"}); parsedRows=parseWorkbook(wb); if(!parsedRows.length) throw new Error("Не нашел таблицу с координатами и факт OTS/контактами."); parsedPoints=aggregate(parsedRows); renderSummary(summarize(parsedRows, parsedPoints)); setLog("Файл загружен. Можно создавать карту.", "ok");}catch(err){parsedRows=[];parsedPoints=[];setLog("Ошибка: "+err.message,"err")}};
     document.getElementById("createMap").onclick = async () => { if(!parsedPoints.length){setLog("Сначала загрузи Excel-отчет.","err");return} try{const map=await api("/api/maps",{method:"POST",body:JSON.stringify({title:document.getElementById("mapTitle").value,client:document.getElementById("clientName").value,points:parsedPoints})}); setLog(`Карта создана. Клиентская ссылка: ${publicUrl(map.id)}`,"ok"); await loadMaps();}catch(err){setLog("Ошибка: "+err.message,"err")} };
     document.getElementById("mapSearch").oninput = e => renderRows(e.target.value);
