@@ -4,6 +4,7 @@ const path = require("path");
 const crypto = require("crypto");
 
 const PORT = Number(process.env.PORT || 8787);
+const HOST = process.env.HOST || "0.0.0.0";
 const ROOT = __dirname;
 const PUBLIC = path.join(ROOT, "public");
 const DATA = path.join(ROOT, "data");
@@ -138,6 +139,7 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-server.listen(PORT, "127.0.0.1", () => {
-  console.log(`DSP Tools server: http://127.0.0.1:${PORT}`);
+server.listen(PORT, HOST, () => {
+  const shownHost = HOST === "0.0.0.0" ? "127.0.0.1" : HOST;
+  console.log(`DSP Tools server: http://${shownHost}:${PORT}`);
 });

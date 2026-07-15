@@ -1,0 +1,14 @@
+{
+  "name": "dsp-tools-postcampaign",
+  "version": "0.4.1",
+  "private": true,
+  "description": "DSP Tools post-campaign pDOOH heatmap portal prototype.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {}
+}
