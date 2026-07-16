@@ -41,7 +41,7 @@ function send(res, status, body, type = "application/json; charset=utf-8", heade
     "Cache-Control": "no-store",
     ...headers
   });
-  res.end(typeof body === "string" ? body : JSON.stringify(body));
+  res.end(Buffer.isBuffer(body) ? body : (typeof body === "string" ? body : JSON.stringify(body)));
 }
 
 function safeEqual(left, right) {
