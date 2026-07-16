@@ -13,6 +13,8 @@ const PORTAL_USER = process.env.PORTAL_USER || "evgeny@agency.ru";
 const PORTAL_PASSWORD = process.env.PORTAL_PASSWORD || "demo-password";
 const MAP_PROVIDER = process.env.MAP_PROVIDER || "osm";
 const YANDEX_MAPS_API_KEY = process.env.YANDEX_MAPS_API_KEY || "";
+const LEGAL_OPERATOR_NAME = process.env.LEGAL_OPERATOR_NAME || "Оператор портала DSP Tools";
+const PRIVACY_CONTACT_EMAIL = process.env.PRIVACY_CONTACT_EMAIL || "privacy@dsptools.ru";
 const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
 const SESSION_COOKIE = "dsp_session";
 const sessions = new Map();
@@ -124,6 +126,13 @@ function publicFile(file) {
 
 function serveIndex(res) {
   send(res, 200, fs.readFileSync(publicFile("index.html"), "utf8"), "text/html; charset=utf-8");
+}
+
+function servePrivacy(res) {
+  const html = fs.readFileSync(publicFile("privacy.html"), "utf8")
+    .replaceAll("{{operatorName}}", LEGAL_OPERATOR_NAME)
+    .replaceAll("{{privacyEmail}}", PRIVACY_CONTACT_EMAIL);
+  send(res, 200, html, "text/html; charset=utf-8");
 }
 
 function serveStatic(req, res) {
@@ -240,6 +249,7 @@ const server = http.createServer(async (req, res) => {
   try {
     const url = new URL(req.url, `http://${req.headers.host}`);
     if (url.pathname.startsWith("/api/")) return handleApi(req, res, url);
+    if (url.pathname === "/privacy") return servePrivacy(res);
     if (serveStatic(req, res)) return;
     return serveIndex(res);
   } catch (error) {
