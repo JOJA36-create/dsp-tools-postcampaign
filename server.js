@@ -11,6 +11,8 @@ const DATA = path.join(ROOT, "data");
 const DB = path.join(DATA, "maps.json");
 const PORTAL_USER = process.env.PORTAL_USER || "evgeny@agency.ru";
 const PORTAL_PASSWORD = process.env.PORTAL_PASSWORD || "demo-password";
+const MAP_PROVIDER = process.env.MAP_PROVIDER || "osm";
+const YANDEX_MAPS_API_KEY = process.env.YANDEX_MAPS_API_KEY || "";
 const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
 const SESSION_COOKIE = "dsp_session";
 const sessions = new Map();
@@ -148,6 +150,13 @@ function serveStatic(req, res) {
 
 async function handleApi(req, res, url) {
   const maps = readMaps();
+
+  if (req.method === "GET" && url.pathname === "/api/public-config") {
+    return send(res, 200, {
+      mapProvider: MAP_PROVIDER,
+      yandexMapsApiKey: YANDEX_MAPS_API_KEY
+    });
+  }
 
   if (req.method === "POST" && url.pathname === "/api/auth/login") {
     if (!loginAllowed(req)) return send(res, 429, { error: "Слишком много попыток. Повторите через 10 минут" });
