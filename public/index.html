@@ -31,7 +31,7 @@
     </div>
     <form class="login-card" id="loginForm">
       <div class="eyebrow">Secure workspace</div><h2>Вход в DSP Tools</h2><p class="sub" id="loginStatus">Введите данные для доступа к рабочему порталу.</p>
-      <div class="field"><label for="loginUser">Email</label><input id="loginUser" type="email" autocomplete="username" placeholder="example@mail.ru"></div>
+      <div class="field"><label for="loginUser">Логин</label><input id="loginUser" autocomplete="username" placeholder="example-login"></div>
       <div class="field"><label for="loginPassword">Пароль</label><input id="loginPassword" type="password" autocomplete="current-password"></div>
       <div class="actions"><button class="btn maroon" id="loginBtn" type="submit">Войти в портал</button></div>
       <a class="legal-link" href="/privacy" target="_blank" rel="noopener">Политика обработки данных</a>
@@ -56,7 +56,7 @@
           </div>
         </section>
         <section id="maps" class="view"><div class="panel"><div class="toolbar"><div><h2>Все карты</h2><p class="sub">Карты сохраняются в `data/maps.json` на сервере.</p></div><input class="search" id="mapSearch" placeholder="Поиск по клиенту или кампании"></div><table class="table"><thead><tr><th>Карта</th><th>Клиент</th><th>Создал</th><th>Дата</th><th></th></tr></thead><tbody id="mapRows"></tbody></table></div></section>
-        <section id="team" class="view"><div class="panel"><div class="team-layout"><div><h2>Команда</h2><p class="sub">Здесь видны все зарегистрированные пользователи портала.</p><table class="table"><thead><tr><th>Пользователь</th><th>Роль</th><th>Добавлен</th></tr></thead><tbody id="teamRows"></tbody></table></div><form class="team-form" id="createUserForm"><div class="eyebrow">Только для администратора</div><h3>Добавить пользователя</h3><div class="field"><label for="newUserName">Имя</label><input id="newUserName" required placeholder="Например, Анна"></div><div class="field"><label for="newUserEmail">Email</label><input id="newUserEmail" required type="email" placeholder="anna@example.ru"></div><div class="field"><label for="newUserPassword">Временный пароль</label><input id="newUserPassword" required type="password" minlength="10" placeholder="Не менее 10 символов"></div><div class="actions"><button class="btn maroon" type="submit">Создать доступ</button></div><p class="muted" id="userCreateStatus"></p></form></div></div></section>
+        <section id="team" class="view"><div class="panel"><div class="team-layout"><div><h2>Команда</h2><p class="sub">Здесь видны все зарегистрированные пользователи портала.</p><table class="table"><thead><tr><th>Пользователь</th><th>Роль</th><th>Добавлен</th></tr></thead><tbody id="teamRows"></tbody></table></div><form class="team-form" id="createUserForm"><div class="eyebrow">Только для администратора</div><h3>Добавить пользователя</h3><div class="field"><label for="newUserName">Имя</label><input id="newUserName" required placeholder="Например, Анна"></div><div class="field"><label for="newUserLogin">Логин</label><input id="newUserLogin" required autocomplete="off" placeholder="anna.petrova"></div><div class="field"><label for="newUserPassword">Временный пароль</label><input id="newUserPassword" required type="password" minlength="10" placeholder="Не менее 10 символов"></div><div class="actions"><button class="btn maroon" type="submit">Создать доступ</button></div><p class="muted" id="userCreateStatus"></p></form></div></div></section>
       </main>
     </div>
   </section>
@@ -168,7 +168,7 @@
       const status = document.getElementById("userCreateStatus");
       status.textContent = "Создаю доступ...";
       try {
-        await api("/api/users", { method:"POST", body:JSON.stringify({ name:document.getElementById("newUserName").value, username:document.getElementById("newUserEmail").value, password:document.getElementById("newUserPassword").value }) });
+        await api("/api/users", { method:"POST", body:JSON.stringify({ name:document.getElementById("newUserName").value, username:document.getElementById("newUserLogin").value, password:document.getElementById("newUserPassword").value }) });
         event.currentTarget.reset();
         status.textContent = "Пользователь добавлен. Передай ему email и временный пароль.";
         await loadUsers();

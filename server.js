@@ -218,7 +218,7 @@ async function handleApi(req, res, url) {
     const username = String(payload.username || "").trim();
     const password = String(payload.password || "");
     let account = null;
-    if (safeEqual(username, PORTAL_USER) && safeEqual(password, PORTAL_PASSWORD)) {
+    if (safeEqual(username.toLowerCase(), PORTAL_USER.toLowerCase()) && safeEqual(password, PORTAL_PASSWORD)) {
       account = { id: "admin", username: PORTAL_USER, displayName: "Евгений", role: "admin" };
     } else {
       const user = readUsers().find(item => String(item.username || "").toLowerCase() === username.toLowerCase());
@@ -262,12 +262,12 @@ async function handleApi(req, res, url) {
       const name = String(payload.name || "").trim().slice(0, 80);
       const username = String(payload.username || "").trim().toLowerCase().slice(0, 140);
       const password = String(payload.password || "");
-      if (!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(username) || password.length < 10) {
-        return send(res, 400, { error: "Enter a name, a valid email and a password of at least 10 characters" });
+      if (!name || !/^[a-z0-9][a-z0-9._-]{2,39}$/.test(username) || password.length < 10) {
+        return send(res, 400, { error: "Укажи имя, логин латиницей от 3 до 40 символов и пароль не короче 10 символов" });
       }
       const users = readUsers();
       const exists = username === PORTAL_USER.toLowerCase() || users.some(user => user.username.toLowerCase() === username);
-      if (exists) return send(res, 409, { error: "This email is already registered" });
+      if (exists) return send(res, 409, { error: "Такой логин уже зарегистрирован" });
       const credentials = passwordRecord(password);
       const user = { id: crypto.randomUUID(), name, username, role: "member", createdAt: new Date().toISOString(), passwordHash: credentials.hash, salt: credentials.salt };
       users.unshift(user);
