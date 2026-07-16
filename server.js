@@ -277,6 +277,19 @@ async function handleApi(req, res, url) {
     }
   }
 
+  const userMatch = url.pathname.match(/^\/api\/users\/([^/]+)$/);
+  if (userMatch && req.method === "DELETE") {
+    if (!requireAdmin(req, res)) return;
+    const users = readUsers();
+    const target = users.find(user => user.id === userMatch[1]);
+    if (!target) return send(res, 404, { error: "User not found" });
+    writeUsers(users.filter(user => user.id !== target.id));
+    for (const [token, session] of sessions.entries()) {
+      if (session.id === target.id) sessions.delete(token);
+    }
+    return send(res, 200, { ok: true });
+  }
+
   const match = url.pathname.match(/^\/api\/maps\/([^/]+)$/);
   if (match && req.method === "GET") {
     const map = maps.find(item => item.id === match[1]);

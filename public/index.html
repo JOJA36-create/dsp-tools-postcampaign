@@ -57,7 +57,7 @@
         </section>
         <section id="maps" class="view"><div class="panel"><div class="toolbar"><div><h2>Все карты</h2><p class="sub">Карты сохраняются в `data/maps.json` на сервере.</p></div><input class="search" id="mapSearch" placeholder="Поиск по клиенту или кампании"></div><table class="table"><thead><tr><th>Карта</th><th>Клиент</th><th>Создал</th><th>Дата</th><th></th></tr></thead><tbody id="mapRows"></tbody></table></div></section>
         <section id="video" class="view"><div class="panel video-work"><div class="video-copy"><div class="eyebrow">Новый инструмент</div><h2>Видео-конвертер</h2><p class="sub">Готовим сервис для подготовки роликов под требования цифровых экранов и рекламных площадок.</p><div class="build-tag"><i></i>Сервис в работе</div></div><div class="video-art" role="img" aria-label="Видео-конвертер в разработке"></div></div></section>
-        <section id="team" class="view"><div class="panel"><div class="team-layout"><div><h2>Команда</h2><p class="sub">Здесь видны все зарегистрированные пользователи портала.</p><table class="table"><thead><tr><th>Пользователь</th><th>Роль</th><th>Добавлен</th></tr></thead><tbody id="teamRows"></tbody></table></div><form class="team-form" id="createUserForm"><div class="eyebrow">Только для администратора</div><h3>Добавить пользователя</h3><div class="field"><label for="newUserName">Имя</label><input id="newUserName" required placeholder="Например, Анна"></div><div class="field"><label for="newUserLogin">Логин</label><input id="newUserLogin" required autocomplete="off" placeholder="anna.petrova"></div><div class="field"><label for="newUserPassword">Временный пароль</label><input id="newUserPassword" required type="password" minlength="10" placeholder="Не менее 10 символов"></div><div class="actions"><button class="btn maroon" type="submit">Создать доступ</button></div><p class="muted" id="userCreateStatus"></p></form></div></div></section>
+        <section id="team" class="view"><div class="panel"><div class="team-layout"><div><h2>Команда</h2><p class="sub">Здесь видны все зарегистрированные пользователи портала.</p><table class="table"><thead><tr><th>Пользователь</th><th>Роль</th><th>Добавлен</th><th></th></tr></thead><tbody id="teamRows"></tbody></table></div><form class="team-form" id="createUserForm"><div class="eyebrow">Только для администратора</div><h3>Добавить пользователя</h3><div class="field"><label for="newUserName">Имя</label><input id="newUserName" required placeholder="Например, Анна"></div><div class="field"><label for="newUserLogin">Логин</label><input id="newUserLogin" required autocomplete="off" placeholder="anna.petrova"></div><div class="field"><label for="newUserPassword">Временный пароль</label><input id="newUserPassword" required type="password" minlength="10" placeholder="Не менее 10 символов"></div><div class="actions"><button class="btn maroon" type="submit">Создать доступ</button></div><p class="muted" id="userCreateStatus"></p></form></div></div></section>
       </main>
     </div>
   </section>
@@ -161,7 +161,12 @@
     async function loadUsers(){
       const users = await api("/api/users");
       const rows = [{ name: currentSession.displayName || currentSession.username, username: currentSession.username, role: "admin", createdAt: null }, ...users];
-      document.getElementById("teamRows").innerHTML = rows.map(user => `<tr><td><div class="map-name">${escHtml(user.name)}</div><div class="muted">${escHtml(user.username)}</div></td><td>${user.role === "admin" ? "Администратор" : "Сотрудник"}</td><td>${user.createdAt ? new Date(user.createdAt).toLocaleDateString("ru-RU") : "Основной аккаунт"}</td></tr>`).join("");
+      document.getElementById("teamRows").innerHTML = rows.map(user => `<tr><td><div class="map-name">${escHtml(user.name)}</div><div class="muted">${escHtml(user.username)}</div></td><td>${user.role === "admin" ? "Администратор" : "Сотрудник"}</td><td>${user.createdAt ? new Date(user.createdAt).toLocaleDateString("ru-RU") : "Основной аккаунт"}</td><td>${user.id ? `<button class="btn danger" data-delete-user="${user.id}">Удалить</button>` : ""}</td></tr>`).join("");
+      document.querySelectorAll("[data-delete-user]").forEach(button => button.onclick = async () => {
+        if (!window.confirm("Удалить этого пользователя и закрыть ему доступ к порталу?")) return;
+        await api(`/api/users/${button.dataset.deleteUser}`, { method:"DELETE" });
+        await loadUsers();
+      });
     }
 
     async function createUser(event){
