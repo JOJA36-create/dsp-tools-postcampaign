@@ -65,6 +65,8 @@
     let parsedPoints = [];
     let mapsCache = [];
     let activeLeafletMap = null;
+    let activeYandexMap = null;
+    let yandexMapsLoading = null;
 
     function num(v){ if(v == null || v === "") return null; const x = Number(String(v).replace(/\s/g,"").replace(",", ".")); return Number.isFinite(x) ? x : null; }
     function norm(s){ return String(s || "").toLowerCase().replace(/ё/g,"е").replace(/[.,()"«»]/g," ").replace(/\s+/g," ").trim(); }
@@ -176,7 +178,47 @@
       wrap.classList.remove("hidden");
       const mapData = await api(`/api/maps/${id}`);
       wrap.innerHTML = `<div class="map-app"><aside class="map-aside"><h1>${escHtml(mapData.title)}</h1><div class="sub">Клиентский просмотр карты.</div><div class="stats"><div class="stat"><b id="visibleCount">0</b><span>точек</span></div><div class="stat"><b id="totalContacts">0</b><span>факт OTS</span></div><div class="stat"><b id="totalPlays">0</b><span>выходов</span></div><div class="stat"><b id="totalSpend">0</b><span>потрачено</span></div></div><label>Город</label><select id="city"><option value="all">Все города</option></select><label>Формат</label><select id="format"><option value="all">Все форматы</option></select><label>Подложка</label><select id="basemap"><option value="osm">OSM</option><option value="light">Светлая</option><option value="dark">Темная</option><option value="satellite">Спутник</option></select><label>Группировка ореолов</label><select id="metric"><option value="contacts">По контактам / OTS</option><option value="plays">По выходам</option><option value="spend">По средствам</option></select><label class="toggle"><input id="halo" type="checkbox" checked>Показывать ореолы</label><label class="toggle"><input id="rankLabels" type="checkbox" checked>Показывать рейтинг 1-5</label><label>Поиск</label><input id="search" placeholder="Адрес или GID"><div class="legend"><div><span class="dot" style="background:#ef4444"></span>5 — максимум в городе</div><div><span class="dot" style="background:#60a5fa"></span>1 — минимум</div></div><div class="note">Рейтинг считается отдельно внутри каждого города и пересчитывается при смене группировки.</div></aside><main style="position:relative"><div id="map"></div><div class="card" id="card"><div class="close" id="close">×</div><div id="cardBody"></div></div></main></div>`;
-      renderLeaflet(mapData.points);
+      const mapConfig = await api("/api/public-config");
+      if(mapConfig.mapProvider === "yandex" && mapConfig.yandexMapsApiKey){
+        renderYandex(mapData.points, mapConfig.yandexMapsApiKey);
+      }else{
+        renderLeaflet(mapData.points);
+      }
+    }
+
+    function ensureYandexMaps(apiKey){
+      if(window.ymaps) return Promise.resolve(window.ymaps);
+      if(yandexMapsLoading) return yandexMapsLoading;
+      yandexMapsLoading = new Promise((resolve,reject)=>{
+        const script=document.createElement("script");
+        script.src=`https://api-maps.yandex.ru/2.1/?apikey=${encodeURIComponent(apiKey)}&lang=ru_RU`;
+        script.async=true;
+        script.onload=()=>window.ymaps ? window.ymaps.ready(()=>resolve(window.ymaps)) : reject(new Error("Yandex Maps API did not load"));
+        script.onerror=()=>reject(new Error("Yandex Maps API did not load"));
+        document.head.appendChild(script);
+      });
+      return yandexMapsLoading;
+    }
+
+    async function renderYandex(points, apiKey){
+      if(activeLeafletMap){activeLeafletMap.remove();activeLeafletMap=null;}
+      const city = document.getElementById("city"), format = document.getElementById("format"), basemap = document.getElementById("basemap"), metric = document.getElementById("metric"), halo = document.getElementById("halo"), rankLabels = document.getElementById("rankLabels"), search = document.getElementById("search"), card = document.getElementById("card"), cardBody = document.getElementById("cardBody");
+      basemap.innerHTML='<option value="yandex#map">Схема</option><option value="yandex#satellite">Спутник</option>';
+      function uniq(a){return[...new Set(a.filter(Boolean))].sort((x,y)=>x.localeCompare(y,"ru"))}
+      function opt(s,v){const o=document.createElement("option");o.value=v;o.textContent=v;s.appendChild(o)}
+      uniq(points.map(p=>p.city)).forEach(v=>opt(city,v)); uniq(points.map(p=>p.format)).forEach(v=>opt(format,v));
+      function color(r){return ["","#60a5fa","#22c55e","#eab308","#f97316","#ef4444"][r]||"#2563eb"}
+      function current(){const q=search.value.toLowerCase();return points.filter(p=>(city.value==="all"||p.city===city.value)&&(format.value==="all"||p.format===format.value)&&(!q||[p.address,p.gid].join(" ").toLowerCase().includes(q)))}
+      function recalc(){const byCity={};points.forEach(p=>{const c=p.city||"Без города";(byCity[c]||(byCity[c]=[])).push(p)});Object.values(byCity).forEach(group=>{const vals=group.map(p=>Number(p[metric.value]||0)).sort((a,b)=>a-b),max=Math.max(1,...vals);group.forEach(p=>{const v=Number(p[metric.value]||0);const idx=vals.findIndex(x=>x>=v);const pct=(idx<0?1:idx/Math.max(1,vals.length-1));p.liveScore=Math.max(.05,v/max);p.liveRating=Math.min(5,Math.max(1,Math.floor(pct*5)+1))})})}
+      function cardHtml(p){return `<h2>${escHtml(p.address)}</h2>${[["Рейтинг",p.liveRating],["Город",p.city],["Формат",p.format],["GID",p.gid],["Факт OTS",fmt(p.contacts)],["Выходов",fmt(p.plays)],["Потрачено",money(p.spend)]].map(r=>`<div class="row"><span>${r[0]}</span><b>${escHtml(r[1])}</b></div>`).join("")}`}
+      try{
+        const ymaps=await ensureYandexMaps(apiKey);
+        if(activeYandexMap) activeYandexMap.destroy();
+        activeYandexMap=new ymaps.Map("map",{center:[55.751244,37.618423],zoom:5,type:basemap.value,controls:["zoomControl"]},{suppressMapOpenBlock:true});
+        const collection=new ymaps.GeoObjectCollection(); activeYandexMap.geoObjects.add(collection);
+        function render(){recalc();const f=current();collection.removeAll();let contacts=0,plays=0,spend=0,minLat=90,maxLat=-90,minLon=180,maxLon=-180;f.forEach(p=>{contacts+=Number(p.contacts||0);plays+=Number(p.plays||0);spend+=Number(p.spend||0);const rank=p.liveRating,col=color(rank),r=90+rank*35+p.liveScore*280,haloRadius=r*3.4;if(halo.checked){collection.add(new ymaps.Circle([[p.lat,p.lon],haloRadius],{},{fillColor:col,fillOpacity:.10,strokeColor:col,strokeOpacity:.08,strokeWidth:1,interactivityModel:"default#transparent"}));collection.add(new ymaps.Circle([[p.lat,p.lon],haloRadius*.52],{},{fillColor:col,fillOpacity:.13,strokeColor:col,strokeOpacity:.10,strokeWidth:1,interactivityModel:"default#transparent"}));}const marker=new ymaps.Placemark([p.lat,p.lon],{iconContent:rankLabels.checked?String(rank):""},{preset:rankLabels.checked?"islands#circleIcon":"islands#circleDotIcon",iconColor:col,iconContentColor:"#ffffff",iconContentSize:13});marker.events.add("click",()=>{cardBody.innerHTML=cardHtml(p);card.classList.add("visible")});collection.add(marker);minLat=Math.min(minLat,p.lat);maxLat=Math.max(maxLat,p.lat);minLon=Math.min(minLon,p.lon);maxLon=Math.max(maxLon,p.lon)});document.getElementById("visibleCount").textContent=fmt(f.length);document.getElementById("totalContacts").textContent=fmt(contacts);document.getElementById("totalPlays").textContent=fmt(plays);document.getElementById("totalSpend").textContent=money(spend);if(f.length===1)activeYandexMap.setCenter([f[0].lat,f[0].lon],12);else if(f.length)activeYandexMap.setBounds([[minLat,minLon],[maxLat,maxLon]],{checkZoomRange:true,zoomMargin:36,duration:0})}
+        basemap.onchange=()=>activeYandexMap.setType(basemap.value); document.getElementById("close").onclick=()=>card.classList.remove("visible"); city.onchange=format.onchange=metric.onchange=halo.onchange=rankLabels.onchange=search.oninput=render;render();
+      }catch(error){document.getElementById("map").innerHTML='<div style="padding:24px;color:#8b1e2d">Не удалось загрузить Яндекс Карты. Проверьте API-ключ в настройках сервера.</div>';}
     }
 
     function renderLeaflet(points){
