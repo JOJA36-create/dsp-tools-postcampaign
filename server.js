@@ -13,8 +13,8 @@ const PORTAL_USER = process.env.PORTAL_USER || "evgeny@agency.ru";
 const PORTAL_PASSWORD = process.env.PORTAL_PASSWORD || "demo-password";
 const MAP_PROVIDER = process.env.MAP_PROVIDER || "osm";
 const YANDEX_MAPS_API_KEY = process.env.YANDEX_MAPS_API_KEY || "";
-const LEGAL_OPERATOR_NAME = process.env.LEGAL_OPERATOR_NAME || "Оператор портала DSP Tools";
-const PRIVACY_CONTACT_EMAIL = process.env.PRIVACY_CONTACT_EMAIL || "privacy@dsptools.ru";
+const LEGAL_OPERATOR_NAME = process.env.LEGAL_OPERATOR_NAME || "Евгений К., физическое лицо";
+const PRIVACY_CONTACT_EMAIL = process.env.PRIVACY_CONTACT_EMAIL || "";
 const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
 const SESSION_COOKIE = "dsp_session";
 const sessions = new Map();
@@ -124,14 +124,24 @@ function publicFile(file) {
   return path.join(PUBLIC, file);
 }
 
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, char => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"
+  }[char]));
+}
+
 function serveIndex(res) {
   send(res, 200, fs.readFileSync(publicFile("index.html"), "utf8"), "text/html; charset=utf-8");
 }
 
 function servePrivacy(res) {
+  const contactEmail = escapeHtml(PRIVACY_CONTACT_EMAIL);
+  const contactSection = PRIVACY_CONTACT_EMAIL
+    ? `<h2>Обращения</h2><p>По вопросам обработки данных, удаления карты или реализации прав субъекта персональных данных обращайтесь: <a href="mailto:${contactEmail}">${contactEmail}</a>.</p>`
+    : "";
   const html = fs.readFileSync(publicFile("privacy.html"), "utf8")
-    .replaceAll("{{operatorName}}", LEGAL_OPERATOR_NAME)
-    .replaceAll("{{privacyEmail}}", PRIVACY_CONTACT_EMAIL);
+    .replaceAll("{{operatorName}}", escapeHtml(LEGAL_OPERATOR_NAME))
+    .replaceAll("{{contactSection}}", contactSection);
   send(res, 200, html, "text/html; charset=utf-8");
 }
 
