@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Политика обработки данных | DSP Tools</title>
+  <style>
+    :root{--ink:#171b22;--muted:#667085;--line:#ded7cc;--paper:#fffdf9;--maroon:#9b1f2d;--green:#0f3d2f}*{box-sizing:border-box}body{margin:0;background:#f3f0ea;color:var(--ink);font:16px/1.6 Arial,Helvetica,sans-serif}.page{max-width:860px;margin:0 auto;padding:36px 20px 64px}.brand{display:flex;align-items:center;gap:10px;color:var(--green);font-weight:800;letter-spacing:1.8px;text-transform:uppercase}.mark{display:grid;place-items:center;width:42px;height:42px;border-radius:7px;background:var(--maroon);color:#fff;letter-spacing:0;font-size:17px}.doc{margin-top:26px;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:36px;box-shadow:0 12px 30px rgba(38,31,22,.08)}h1{font-size:32px;line-height:1.15;margin:0 0 8px}h2{font-size:19px;line-height:1.3;margin:28px 0 8px}.lead,.meta{color:var(--muted)}.meta{font-size:14px}ul{padding-left:22px}a{color:#8b1e2d}footer{margin-top:26px;color:var(--muted);font-size:13px}@media(max-width:600px){.page{padding:18px 12px 36px}.doc{padding:24px 20px}h1{font-size:27px}}
+  </style>
+</head>
+<body>
+  <main class="page">
+    <div class="brand"><div class="mark">DSP</div><span>DSP Tools</span></div>
+    <article class="doc">
+      <h1>Политика обработки данных</h1>
+      <p class="lead">Настоящая политика описывает обработку данных в портале DSP Tools для создания и просмотра post-campaign карт pDOOH.</p>
+      <p class="meta">Оператор: {{operatorName}}<br>Редакция: 16 июля 2026 года</p>
+      <h2>Какие данные обрабатываются</h2>
+      <ul><li>данные доступа к порталу: логин, сведения о сессии, дата и время входа;</li><li>данные отчётов, загружаемых пользователем: адреса конструкций, координаты, GID, город, формат, фактические OTS, выходы и бюджет;</li><li>служебные технические данные: IP-адрес, сведения браузера и журнал запросов, необходимые для работы и защиты портала.</li></ul>
+      <h2>Зачем это нужно</h2>
+      <p>Данные используются для аутентификации пользователей, создания и хранения карт, предоставления клиентских ссылок, защиты от несанкционированного доступа и технической поддержки сервиса.</p>
+      <h2>Хранение и доступ</h2>
+      <p>Карты и данные портала хранятся на сервере, размещённом в Российской Федерации. Доступ к рабочему порталу предоставляется авторизованным пользователям. Клиентская карта доступна по отдельной ссылке: передавать её следует только согласованным получателям.</p>
+      <h2>Картографическая подложка OpenStreetMap</h2>
+      <p>При открытии карты браузер пользователя загружает картографические тайлы OpenStreetMap. Для этого поставщику карт могут передаваться технические данные соединения, включая IP-адрес, сведения браузера и адрес открытой страницы. Содержимое загруженного Excel-отчёта в OpenStreetMap не передаётся.</p>
+      <p>Карта содержит обязательную атрибуцию <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap contributors</a>. Использование тайлов регулируется <a href="https://operations.osmfoundation.org/policies/tiles/" target="_blank" rel="noopener">политикой OpenStreetMap Foundation</a>.</p>
+      <h2>Сроки и защита</h2>
+      <p>Данные хранятся, пока это необходимо для работы карт и исполнения договорных обязательств, либо до удаления карты уполномоченным пользователем. Для защиты применяются авторизация, защищённое HTTPS-соединение и ограничение доступа к серверу.</p>
+      {{contactSection}}
+      <h2>Изменение политики</h2>
+      <p>Политика может обновляться при изменении функциональности портала, состава обрабатываемых данных или применимых требований. Актуальная редакция всегда доступна по адресу <a href="/privacy">dsptools.ru/privacy</a>.</p>
+    </article>
+    <footer>Документ подготовлен как рабочая редакция для последующей юридической проверки оператором портала.</footer>
+  </main>
+</body>
+</html>
