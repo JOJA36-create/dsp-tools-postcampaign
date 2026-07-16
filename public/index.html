@@ -165,11 +165,12 @@
 
     async function createUser(event){
       event.preventDefault();
+      const form = event.currentTarget;
       const status = document.getElementById("userCreateStatus");
       status.textContent = "Создаю доступ...";
       try {
         await api("/api/users", { method:"POST", body:JSON.stringify({ name:document.getElementById("newUserName").value, username:document.getElementById("newUserLogin").value, password:document.getElementById("newUserPassword").value }) });
-        event.currentTarget.reset();
+        form.reset();
         status.textContent = "Пользователь добавлен. Передай ему email и временный пароль.";
         await loadUsers();
       } catch (error) {

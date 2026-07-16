@@ -284,8 +284,10 @@ async function handleApi(req, res, url) {
   }
 
   if (req.method === "GET" && url.pathname === "/api/maps") {
-    if (!requireSession(req, res)) return;
-    return send(res, 200, maps.map(({ points, ...map }) => map));
+    const session = requireSession(req, res);
+    if (!session) return;
+    const visibleMaps = session.role === "admin" ? maps : maps.filter(map => map.ownerId === session.id);
+    return send(res, 200, visibleMaps.map(({ points, ...map }) => map));
   }
 
   if (req.method === "POST" && url.pathname === "/api/maps") {
