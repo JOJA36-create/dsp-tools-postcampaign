@@ -6,5 +6,6 @@ server.out.log
 server.err.log
 
 .env
+data/users.json
 .DS_Store
 Thumbs.db
