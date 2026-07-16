@@ -9,6 +9,7 @@ const ROOT = __dirname;
 const PUBLIC = path.join(ROOT, "public");
 const DATA = path.join(ROOT, "data");
 const DB = path.join(DATA, "maps.json");
+const USERS_DB = path.join(DATA, "users.json");
 const PORTAL_USER = process.env.PORTAL_USER || "evgeny@agency.ru";
 const PORTAL_PASSWORD = process.env.PORTAL_PASSWORD || "demo-password";
 const MAP_PROVIDER = process.env.MAP_PROVIDER || "osm";
@@ -22,6 +23,7 @@ const loginAttempts = new Map();
 
 if (!fs.existsSync(DATA)) fs.mkdirSync(DATA, { recursive: true });
 if (!fs.existsSync(DB)) fs.writeFileSync(DB, "[]", "utf8");
+if (!fs.existsSync(USERS_DB)) fs.writeFileSync(USERS_DB, "[]", "utf8");
 
 function readMaps() {
   try {
@@ -33,6 +35,29 @@ function readMaps() {
 
 function writeMaps(maps) {
   fs.writeFileSync(DB, JSON.stringify(maps, null, 2), "utf8");
+}
+
+function readUsers() {
+  try {
+    const users = JSON.parse(fs.readFileSync(USERS_DB, "utf8"));
+    return Array.isArray(users) ? users : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeUsers(users) {
+  fs.writeFileSync(USERS_DB, JSON.stringify(users, null, 2), "utf8");
+}
+
+function passwordRecord(password) {
+  const salt = crypto.randomBytes(16).toString("hex");
+  return { salt, hash: crypto.scryptSync(String(password), salt, 64).toString("hex") };
+}
+
+function passwordMatches(password, user) {
+  if (!user?.salt || !user?.passwordHash) return false;
+  return safeEqual(crypto.scryptSync(String(password), user.salt, 64).toString("hex"), user.passwordHash);
 }
 
 function send(res, status, body, type = "application/json; charset=utf-8", headers = {}) {
@@ -124,6 +149,16 @@ function publicFile(file) {
   return path.join(PUBLIC, file);
 }
 
+function requireAdmin(req, res) {
+  const session = requireSession(req, res);
+  if (!session) return null;
+  if (session.role !== "admin") {
+    send(res, 403, { error: "Access denied" });
+    return null;
+  }
+  return session;
+}
+
 function escapeHtml(value) {
   return String(value).replace(/[&<>"']/g, char => ({
     "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"
@@ -180,14 +215,25 @@ async function handleApi(req, res, url) {
   if (req.method === "POST" && url.pathname === "/api/auth/login") {
     if (!loginAllowed(req)) return send(res, 429, { error: "Слишком много попыток. Повторите через 10 минут" });
     const payload = JSON.parse(await readBody(req) || "{}");
-    if (!safeEqual(payload.username || "", PORTAL_USER) || !safeEqual(payload.password || "", PORTAL_PASSWORD)) {
+    const username = String(payload.username || "").trim();
+    const password = String(payload.password || "");
+    let account = null;
+    if (safeEqual(username, PORTAL_USER) && safeEqual(password, PORTAL_PASSWORD)) {
+      account = { id: "admin", username: PORTAL_USER, displayName: "Евгений", role: "admin" };
+    } else {
+      const user = readUsers().find(item => String(item.username || "").toLowerCase() === username.toLowerCase());
+      if (user && passwordMatches(password, user)) {
+        account = { id: user.id, username: user.username, displayName: user.name, role: "member" };
+      }
+    }
+    if (!account) {
       recordFailedLogin(req);
       return send(res, 401, { error: "Неверный логин или пароль" });
     }
     loginAttempts.delete(loginKey(req));
     const token = crypto.randomBytes(32).toString("base64url");
-    sessions.set(token, { username: PORTAL_USER, expiresAt: Date.now() + SESSION_TTL_MS });
-    return send(res, 200, { username: PORTAL_USER }, "application/json; charset=utf-8", {
+    sessions.set(token, { ...account, expiresAt: Date.now() + SESSION_TTL_MS });
+    return send(res, 200, account, "application/json; charset=utf-8", {
       "Set-Cookie": sessionCookie(req, token, Math.floor(SESSION_TTL_MS / 1000))
     });
   }
@@ -202,7 +248,33 @@ async function handleApi(req, res, url) {
 
   if (req.method === "GET" && url.pathname === "/api/auth/session") {
     const session = getSession(req);
+    if (session) return send(res, 200, { username: session.username, displayName: session.displayName, role: session.role });
     return session ? send(res, 200, { username: session.username }) : send(res, 401, { error: "Нет активной сессии" });
+  }
+
+  if (url.pathname === "/api/users") {
+    if (!requireAdmin(req, res)) return;
+    if (req.method === "GET") {
+      return send(res, 200, readUsers().map(({ passwordHash, salt, ...user }) => user));
+    }
+    if (req.method === "POST") {
+      const payload = JSON.parse(await readBody(req) || "{}");
+      const name = String(payload.name || "").trim().slice(0, 80);
+      const username = String(payload.username || "").trim().toLowerCase().slice(0, 140);
+      const password = String(payload.password || "");
+      if (!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(username) || password.length < 10) {
+        return send(res, 400, { error: "Enter a name, a valid email and a password of at least 10 characters" });
+      }
+      const users = readUsers();
+      const exists = username === PORTAL_USER.toLowerCase() || users.some(user => user.username.toLowerCase() === username);
+      if (exists) return send(res, 409, { error: "This email is already registered" });
+      const credentials = passwordRecord(password);
+      const user = { id: crypto.randomUUID(), name, username, role: "member", createdAt: new Date().toISOString(), passwordHash: credentials.hash, salt: credentials.salt };
+      users.unshift(user);
+      writeUsers(users);
+      const { passwordHash, salt, ...safeUser } = user;
+      return send(res, 201, safeUser);
+    }
   }
 
   const match = url.pathname.match(/^\/api\/maps\/([^/]+)$/);
@@ -217,7 +289,8 @@ async function handleApi(req, res, url) {
   }
 
   if (req.method === "POST" && url.pathname === "/api/maps") {
-    if (!requireSession(req, res)) return;
+    const session = requireSession(req, res);
+    if (!session) return;
     const payload = JSON.parse(await readBody(req) || "{}");
     if (!payload.title || !Array.isArray(payload.points) || !payload.points.length) {
       return send(res, 400, { error: "Не хватает названия или точек карты" });
@@ -231,6 +304,8 @@ async function handleApi(req, res, url) {
       title: String(payload.title).slice(0, 140),
       client: String(payload.client || "Без клиента").slice(0, 140),
       owner: "Евгений",
+      owner: session.displayName || session.username,
+      ownerId: session.id,
       createdAt: now.toISOString(),
       pointsCount: payload.points.length,
       citiesCount: new Set(payload.points.map(p => p.city).filter(Boolean)).size,
@@ -246,7 +321,13 @@ async function handleApi(req, res, url) {
   }
 
   if (match && req.method === "DELETE") {
-    if (!requireSession(req, res)) return;
+    const session = requireSession(req, res);
+    if (!session) return;
+    const map = maps.find(item => item.id === match[1]);
+    if (!map) return send(res, 404, { error: "Map not found" });
+    if (session.role !== "admin" && map.ownerId !== session.id) {
+      return send(res, 403, { error: "Only the map owner can delete this map" });
+    }
     const next = maps.filter(item => item.id !== match[1]);
     writeMaps(next);
     return send(res, 200, { ok: true });
